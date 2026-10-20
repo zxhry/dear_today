@@ -10,6 +10,7 @@ import '../widgets/postmark.dart';
 import '../widgets/stamp.dart';
 import '../widgets/stamp_picture.dart';
 import '../widgets/step_header.dart';
+import '../widgets/wax_seal.dart';
 import 'letter_screen.dart';
 
 /// Step 3: the signature moment. The postmark thunks down, the seal pops in.
@@ -31,11 +32,21 @@ class _SealedScreenState extends State<SealedScreen> with SingleTickerProviderSt
   void initState() {
     super.initState();
     _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600));
-    _stamp = CurvedAnimation(parent: _c, curve: const Interval(0.1, 0.45, curve: Curves.easeOutBack));
-    _seal = CurvedAnimation(parent: _c, curve: const Interval(0.5, 0.85, curve: Curves.elasticOut));
-    _c.forward();
-    // A little buzz the moment the postmark lands.
-    Future.delayed(const Duration(milliseconds: 620), () {
+    // First the wax seal presses onto the envelope, then the postmark (cop)
+    // thunks down over the stamp, just like at the post office.
+    _seal = CurvedAnimation(parent: _c, curve: const Interval(0.05, 0.4, curve: Curves.elasticOut));
+    _stamp = CurvedAnimation(parent: _c, curve: const Interval(0.45, 0.8, curve: Curves.easeOutBack));
+    // Wait for the screen to finish sliding in, so the stamp-down isn't
+    // competing with the page transition.
+    Future.delayed(const Duration(milliseconds: 380), () {
+      if (mounted) _c.forward();
+    });
+    // A light tap as the wax seal presses on...
+    Future.delayed(const Duration(milliseconds: 560), () {
+      if (mounted) HapticFeedback.lightImpact();
+    });
+    // ...and a firmer buzz when the postmark lands.
+    Future.delayed(const Duration(milliseconds: 1260), () {
       if (mounted) HapticFeedback.mediumImpact();
     });
   }
@@ -84,25 +95,9 @@ class _SealedScreenState extends State<SealedScreen> with SingleTickerProviderSt
                   ),
                   // Wax seal.
                   Positioned(
-                    left: 124,
-                    top: 92,
-                    child: ScaleTransition(
-                      scale: _seal,
-                      child: Container(
-                        width: 52,
-                        height: 52,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.accent,
-                          boxShadow: [
-                            BoxShadow(color: AppColors.accent.withValues(alpha: 0.25), spreadRadius: 4),
-                            const BoxShadow(color: AppColors.ink, offset: Offset(0, 3)),
-                          ],
-                        ),
-                        child: Text('DT', style: AppText.hand(22, color: AppColors.white)),
-                      ),
-                    ),
+                    left: 121,
+                    top: 89,
+                    child: ScaleTransition(scale: _seal, child: const WaxSeal(size: 58)),
                   ),
                   // Today's stamp in the corner.
                   Positioned(
