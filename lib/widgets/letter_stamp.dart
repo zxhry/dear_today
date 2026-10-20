@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../models/letter.dart';
 import '../theme.dart';
+import '../utils/dates.dart';
 import 'stamp.dart';
+import 'stamp_picture.dart';
 
-/// One small stamp in the album grid: picture area, short title, day number.
+/// One small stamp in the album grid: picture, short title, day number.
 class LetterStamp extends StatelessWidget {
   final Letter letter;
   final double tilt;
@@ -15,7 +17,7 @@ class LetterStamp extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: '${letter.title}, ${letter.date.day} October',
+      label: '${letter.title}, ${letter.date.day} ${monthName(letter.date)}',
       child: GestureDetector(
         onTap: onTap,
         child: StampFrame(
@@ -23,14 +25,7 @@ class LetterStamp extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Picture area (a doodle for now; real photos come later).
-              Expanded(
-                child: Container(
-                  color: letter.tint,
-                  alignment: Alignment.center,
-                  child: Icon(letter.icon, size: 32, color: AppColors.ink),
-                ),
-              ),
+              Expanded(child: StampPicture(photoPath: letter.photoPath, doodle: letter.doodle)),
               const SizedBox(height: 6),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.end,

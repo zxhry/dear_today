@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'data/letter_store.dart';
 import 'screens/album_screen.dart';
 import 'theme.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await LetterStore.instance.load(); // read saved letters before showing the album
   runApp(const DearTodayApp());
 }
 

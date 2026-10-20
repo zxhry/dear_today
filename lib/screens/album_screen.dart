@@ -1,57 +1,93 @@
 import 'package:flutter/material.dart';
+
+import '../data/letter_store.dart';
 import '../models/letter.dart';
 import '../theme.dart';
+import '../utils/dates.dart';
+import '../widgets/buttons.dart';
 import '../widgets/letter_stamp.dart';
+import '../widgets/stamp.dart';
+import 'letter_screen.dart';
+import 'write_photo_screen.dart';
 
-/// Home screen: this month's letters shown as a sheet of stamps.
-class AlbumScreen extends StatelessWidget {
+/// Home screen: one month of letters shown as a sheet of stamps.
+class AlbumScreen extends StatefulWidget {
   const AlbumScreen({super.key});
 
-  // A little hand-stuck wobble so the stamps don't look machine-placed.
+  @override
+  State<AlbumScreen> createState() => _AlbumScreenState();
+}
+
+class _AlbumScreenState extends State<AlbumScreen> {
   // Right-column stamps get as much tilt as the others (indices 2, 5, 8).
   static const _tilts = [-2.0, 1.5, 2.2, 1.8, -1.5, -2.2, -1.8, 2.0, 1.8];
 
-  @override
-  Widget build(BuildContext context) {
-    final letters = sampleLetters;
+  final store = LetterStore.instance;
+  DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
 
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            const _Header(),
-            _MonthSwitcher(count: letters.length),
-            Expanded(
-              child: GridView.builder(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  mainAxisSpacing: 16,
-                  crossAxisSpacing: 14,
-                  childAspectRatio: 0.8,
-                ),
-                itemCount: letters.length,
-                itemBuilder: (context, i) => LetterStamp(
-                  letter: letters[i],
-                  tilt: _tilts[i % _tilts.length],
-                  onTap: () => _comingSoon(context, 'Opening letters'),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
-              child: _WriteButton(onTap: () => _comingSoon(context, 'Writing a letter')),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: const _BottomTabs(),
-    );
+  bool get _isCurrentMonth {
+    final now = DateTime.now();
+    return _month.year == now.year && _month.month == now.month;
   }
 
-  void _comingSoon(BuildContext context, String what) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$what is coming soon ✉')),
+  void _shiftMonth(int by) => setState(() => _month = DateTime(_month.year, _month.month + by));
+
+  void _openLetter(Letter letter) => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => LetterScreen(letter: letter)),
+      );
+
+  void _writeToday() => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => WritePhotoScreen(draft: LetterDraft(date: DateTime.now()))),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    // Rebuild whenever a letter is sealed.
+    return ListenableBuilder(
+      listenable: store,
+      builder: (context, _) {
+        final letters = store.inMonth(_month.year, _month.month);
+
+        return Scaffold(
+          body: SafeArea(
+            child: Column(
+              children: [
+                const _Header(),
+                _MonthSwitcher(
+                  month: _month,
+                  count: letters.length,
+                  onPrev: () => _shiftMonth(-1),
+                  onNext: _isCurrentMonth ? null : () => _shiftMonth(1),
+                ),
+                Expanded(
+                  child: letters.isEmpty
+                      ? _EmptyMonth(isCurrent: _isCurrentMonth, month: _month)
+                      : GridView.builder(
+                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            mainAxisSpacing: 16,
+                            crossAxisSpacing: 14,
+                            childAspectRatio: 0.8,
+                          ),
+                          itemCount: letters.length,
+                          itemBuilder: (context, i) => LetterStamp(
+                            letter: letters[i],
+                            tilt: _tilts[i % _tilts.length],
+                            onTap: () => _openLetter(letters[i]),
+                          ),
+                        ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
+                  child: ChunkyButton(label: 'Write to today', icon: Icons.edit_outlined, onTap: _writeToday),
+                ),
+              ],
+            ),
+          ),
+          bottomNavigationBar: const _BottomTabs(),
+        );
+      },
     );
   }
 }
@@ -84,8 +120,12 @@ class _Header extends StatelessWidget {
 }
 
 class _MonthSwitcher extends StatelessWidget {
+  final DateTime month;
   final int count;
-  const _MonthSwitcher({required this.count});
+  final VoidCallback onPrev;
+  final VoidCallback? onNext; // null = can't go into the future
+
+  const _MonthSwitcher({required this.month, required this.count, required this.onPrev, this.onNext});
 
   @override
   Widget build(BuildContext context) {
@@ -95,23 +135,23 @@ class _MonthSwitcher extends StatelessWidget {
         children: [
           IconButton(
             tooltip: 'Previous month',
-            onPressed: () {},
+            onPressed: onPrev,
             icon: const Icon(Icons.chevron_left, color: AppColors.ink),
           ),
           Expanded(
             child: Column(
               children: [
-                Text('October 2026', style: AppText.hand(26)),
+                Text(monthYear(month), style: AppText.hand(26)),
                 const SizedBox(height: 2),
-                Text('$count letters sealed',
+                Text('$count ${count == 1 ? 'letter' : 'letters'} sealed',
                     style: AppText.body(13, color: AppColors.inkSoft)),
               ],
             ),
           ),
           IconButton(
             tooltip: 'Next month',
-            onPressed: () {},
-            icon: const Icon(Icons.chevron_right, color: AppColors.ink),
+            onPressed: onNext,
+            icon: Icon(Icons.chevron_right, color: onNext == null ? const Color(0xFFB8C1D6) : AppColors.ink),
           ),
         ],
       ),
@@ -119,30 +159,41 @@ class _MonthSwitcher extends StatelessWidget {
   }
 }
 
-class _WriteButton extends StatelessWidget {
-  final VoidCallback onTap;
-  const _WriteButton({required this.onTap});
+class _EmptyMonth extends StatelessWidget {
+  final bool isCurrent;
+  final DateTime month;
+  const _EmptyMonth({required this.isCurrent, required this.month});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      // The solid navy shadow underneath gives it a chunky, stamp-like feel.
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: const [BoxShadow(color: AppColors.ink, offset: Offset(0, 4))],
-      ),
-      child: SizedBox(
-        width: double.infinity,
-        height: 56,
-        child: FilledButton.icon(
-          onPressed: onTap,
-          style: FilledButton.styleFrom(
-            backgroundColor: AppColors.accent,
-            foregroundColor: AppColors.white,
-            shape: const StadiumBorder(),
-          ),
-          icon: const Icon(Icons.edit_outlined),
-          label: Text('Write to today', style: AppText.hand(24, color: AppColors.white)),
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            StampFrame(
+              tilt: -3,
+              child: Container(
+                width: 90,
+                height: 110,
+                color: const Color(0xFFF3F6FB),
+                alignment: Alignment.center,
+                child: const Icon(Icons.add_a_photo_outlined, size: 34, color: AppColors.inkSoft),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(isCurrent ? 'Your first stamp is waiting' : 'No letters in ${monthName(month)}',
+                textAlign: TextAlign.center, style: AppText.hand(26)),
+            const SizedBox(height: 6),
+            Text(
+              isCurrent
+                  ? 'Tap "Write to today" to seal this month\'s first letter.'
+                  : 'This page of your album is still blank.',
+              textAlign: TextAlign.center,
+              style: AppText.body(14, color: AppColors.inkSoft),
+            ),
+          ],
         ),
       ),
     );
