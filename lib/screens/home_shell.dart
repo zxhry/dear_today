@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../data/tomorrow_store.dart';
 import '../theme.dart';
 import 'album_screen.dart';
 import 'calendar_screen.dart';
+import 'mailbox_screen.dart';
 import 'me_screen.dart';
 
 /// Holds the four tabs and the bottom bar that switches between them.
@@ -22,16 +24,7 @@ class _HomeShellState extends State<HomeShell> {
       // IndexedStack keeps each tab alive, so switching back doesn't reset it.
       body: IndexedStack(
         index: _tab,
-        children: const [
-          AlbumScreen(),
-          CalendarScreen(),
-          _ComingSoon(
-            icon: Icons.markunread_mailbox_outlined,
-            title: 'Your mailbox',
-            text: 'Monthly bundles of letters, and letters to tomorrow, will live here.',
-          ),
-          MeScreen(),
-        ],
+        children: const [AlbumScreen(), CalendarScreen(), MailboxScreen(), MeScreen()],
       ),
       bottomNavigationBar: NavigationBarTheme(
         data: NavigationBarThemeData(
@@ -44,69 +37,49 @@ class _HomeShellState extends State<HomeShell> {
             ),
           ),
         ),
-        child: NavigationBar(
-          selectedIndex: _tab,
-          onDestinationSelected: (i) => setState(() => _tab = i),
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.grid_view_outlined),
-              selectedIcon: Icon(Icons.grid_view_rounded),
-              label: 'Letters',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.calendar_month_outlined),
-              selectedIcon: Icon(Icons.calendar_month),
-              label: 'Calendar',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.markunread_mailbox_outlined),
-              selectedIcon: Icon(Icons.markunread_mailbox),
-              label: 'Mailbox',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.person_outline),
-              selectedIcon: Icon(Icons.person),
-              label: 'Me',
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ComingSoon extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String text;
-  const _ComingSoon({required this.icon, required this.title, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 40),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 56, color: AppColors.ink),
-              const SizedBox(height: 16),
-              Text(title, style: AppText.hand(32)),
-              const SizedBox(height: 8),
-              Text(text, textAlign: TextAlign.center, style: AppText.body(14, color: AppColors.inkSoft)),
-              const SizedBox(height: 14),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                decoration: BoxDecoration(
-                  color: AppColors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.ink, width: 1.5),
+        // Rebuild when mail arrives, so the Mailbox tab can show a badge.
+        child: ListenableBuilder(
+          listenable: TomorrowStore.instance,
+          builder: (context, _) {
+            final mail = TomorrowStore.instance.arrived.length;
+            return NavigationBar(
+              selectedIndex: _tab,
+              onDestinationSelected: (i) => setState(() => _tab = i),
+              destinations: [
+                const NavigationDestination(
+                  icon: Icon(Icons.grid_view_outlined),
+                  selectedIcon: Icon(Icons.grid_view_rounded),
+                  label: 'Letters',
                 ),
-                child: Text('Coming soon', style: AppText.body(12, weight: FontWeight.w800)),
-              ),
-            ],
-          ),
+                const NavigationDestination(
+                  icon: Icon(Icons.calendar_month_outlined),
+                  selectedIcon: Icon(Icons.calendar_month),
+                  label: 'Calendar',
+                ),
+                NavigationDestination(
+                  icon: Badge(
+                    isLabelVisible: mail > 0,
+                    label: Text('$mail'),
+                    backgroundColor: AppColors.accent,
+                    child: const Icon(Icons.markunread_mailbox_outlined),
+                  ),
+                  selectedIcon: Badge(
+                    isLabelVisible: mail > 0,
+                    label: Text('$mail'),
+                    backgroundColor: AppColors.accent,
+                    child: const Icon(Icons.markunread_mailbox),
+                  ),
+                  label: 'Mailbox',
+                  tooltip: mail > 0 ? 'Mailbox, $mail new' : 'Mailbox',
+                ),
+                const NavigationDestination(
+                  icon: Icon(Icons.person_outline),
+                  selectedIcon: Icon(Icons.person),
+                  label: 'Me',
+                ),
+              ],
+            );
+          },
         ),
       ),
     );

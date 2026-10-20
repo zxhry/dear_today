@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'data/letter_store.dart';
 import 'data/settings_store.dart';
+import 'data/tomorrow_store.dart';
 import 'security/app_lock.dart';
 import 'security/vault.dart';
 import 'screens/home_shell.dart';
@@ -11,6 +12,7 @@ Future<void> main() async {
   await SettingsStore.instance.load();
   await Vault.instance.open(); // get the encryption key from the phone's Keystore
   await LetterStore.instance.load(); // read saved letters before showing the album
+  await TomorrowStore.instance.load();
   AppLock.instance.lockIfEnabled(); // start locked if app lock is on
   runApp(const DearTodayApp());
 }

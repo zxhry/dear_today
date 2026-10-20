@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/settings_store.dart';
 import '../security/app_lock.dart';
 import '../theme.dart';
+import 'backup_flows.dart';
 
 /// The "Me" tab: privacy and app settings.
 class MeScreen extends StatelessWidget {
@@ -76,15 +77,36 @@ class MeScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 22),
+              const _SectionTitle('Backup'),
+              _Card(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.backup_outlined, color: AppColors.ink),
+                    title: Text('Create a backup', style: AppText.body(15, weight: FontWeight.w800)),
+                    subtitle: Text(
+                      'Lock all letters and photos with a password, then save the file anywhere.',
+                      style: AppText.body(12, weight: FontWeight.w500, color: AppColors.inkSoft),
+                    ),
+                    trailing: const Icon(Icons.chevron_right, color: AppColors.ink),
+                    onTap: () => createBackupFlow(context),
+                  ),
+                  const Divider(height: 1, indent: 16, endIndent: 16),
+                  ListTile(
+                    leading: const Icon(Icons.settings_backup_restore, color: AppColors.ink),
+                    title: Text('Restore from a backup', style: AppText.body(15, weight: FontWeight.w800)),
+                    subtitle: Text(
+                      'Add letters from a .dtb file. Nothing here is deleted.',
+                      style: AppText.body(12, weight: FontWeight.w500, color: AppColors.inkSoft),
+                    ),
+                    trailing: const Icon(Icons.chevron_right, color: AppColors.ink),
+                    onTap: () => restoreBackupFlow(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 22),
               const _SectionTitle('Coming soon'),
               const _Card(
                 children: [
-                  _SoonTile(
-                    icon: Icons.backup_outlined,
-                    title: 'Backup',
-                    subtitle: 'Save an encrypted copy of your letters.',
-                  ),
-                  Divider(height: 1, indent: 16, endIndent: 16),
                   _SoonTile(
                     icon: Icons.notifications_none,
                     title: 'Daily reminder',

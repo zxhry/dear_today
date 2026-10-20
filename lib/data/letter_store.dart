@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
@@ -140,6 +141,35 @@ class LetterStore extends ChangeNotifier {
     if (letter.photoPath != null) await _deleteFile(letter.photoPath!);
     await _save();
     notifyListeners();
+  }
+
+  /// Adds letters from a backup. Letters already here are skipped, so
+  /// restoring never deletes or duplicates anything. Returns (added, skipped).
+  Future<(int, int)> importLetters(List<Map<String, dynamic>> entries, Map<String, Uint8List> photos) async {
+    var added = 0, skipped = 0;
+    for (final json in entries) {
+      final photoName = json['photoPath'] as String?;
+      var letter = Letter.fromJson({...json, 'photoPath': null});
+      if (_byId(letter.id) != null) {
+        skipped++;
+        continue;
+      }
+      final photo = photoName == null ? null : photos[photoName];
+      if (photo != null) {
+        final dir = await _photosDir();
+        final out = File('${dir.path}/${letter.id}-${DateTime.now().millisecondsSinceEpoch}.dtp');
+        await out.writeAsBytes(await Vault.instance.seal(photo), flush: true);
+        letter = letter.withPhoto(out.path);
+      }
+      _letters.add(letter);
+      added++;
+    }
+    if (added > 0) {
+      _sort();
+      await _save();
+      notifyListeners();
+    }
+    return (added, skipped);
   }
 
   Letter? _byId(String id) {
