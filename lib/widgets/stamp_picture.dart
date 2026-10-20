@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/letter.dart';
 import '../theme.dart';
+import 'vault_image.dart';
 
 /// The picture inside a stamp: the photo if there is one, otherwise the doodle.
 class StampPicture extends StatelessWidget {
@@ -19,13 +20,20 @@ class StampPicture extends StatelessWidget {
       alignment: Alignment.center,
       child: Icon(d.icon, size: iconSize, color: AppColors.ink),
     );
-    if (photoPath == null) return doodleView;
+    final path = photoPath;
+    if (path == null) return doodleView;
+
+    // Saved letters' photos are encrypted (.dtp); a just-picked photo is a
+    // normal temporary file until the letter is sealed.
+    if (path.endsWith('.dtp')) {
+      return VaultImage(path: path, fallback: doodleView, decodeWidth: iconSize < 40 ? 300 : 1000);
+    }
     return Image.file(
-      File(photoPath!),
+      File(path),
       fit: BoxFit.cover,
       width: double.infinity,
       height: double.infinity,
-      errorBuilder: (_, _, _) => doodleView, // photo missing? fall back to the doodle
+      errorBuilder: (_, _, _) => doodleView,
     );
   }
 }

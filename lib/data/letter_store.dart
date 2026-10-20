@@ -5,12 +5,14 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../models/letter.dart';
+import '../security/vault.dart';
 import '../utils/dates.dart';
+import '../widgets/vault_image.dart';
 
-/// Keeps every letter, saved as a file in the app's private folder.
+/// Keeps every letter in the app's private folder, encrypted.
 ///
-/// Version 1 is a plain JSON file. Later we'll swap this for an encrypted
-/// database without the screens needing to change.
+/// letters.dt  = all letters as JSON, encrypted with the Vault
+/// photos/*.dtp = each photo, encrypted with the Vault
 class LetterStore extends ChangeNotifier {
   LetterStore._();
   static final instance = LetterStore._();
@@ -25,6 +27,20 @@ class LetterStore extends ChangeNotifier {
 
   List<Letter> forDay(DateTime day) => _letters.where((l) => sameDay(l.date, day)).toList();
 
+  /// How many days in a row have a letter, ending today (or yesterday,
+  /// so the streak doesn't vanish in the morning before you've written).
+  int get streak {
+    final now = DateTime.now();
+    var day = DateTime(now.year, now.month, now.day);
+    if (forDay(day).isEmpty) day = DateTime(day.year, day.month, day.day - 1);
+    var count = 0;
+    while (forDay(day).isNotEmpty) {
+      count++;
+      day = DateTime(day.year, day.month, day.day - 1);
+    }
+    return count;
+  }
+
   /// "Letter No. 3" = the 3rd letter of that month, counting from the 1st.
   int numberInMonth(Letter letter) {
     final oldestFirst = inMonth(letter.date.year, letter.date.month).reversed.toList();
@@ -33,7 +49,8 @@ class LetterStore extends ChangeNotifier {
   }
 
   Future<Directory> _appDir() async => _dir ??= await getApplicationDocumentsDirectory();
-  Future<File> _file() async => File('${(await _appDir()).path}/letters.json');
+  Future<File> _file() async => File('${(await _appDir()).path}/letters.dt');
+  Future<File> _legacyFile() async => File('${(await _appDir()).path}/letters.json'); // before encryption
   Future<Directory> _photosDir() async {
     final d = Directory('${(await _appDir()).path}/photos');
     await d.create(recursive: true);
@@ -42,20 +59,51 @@ class LetterStore extends ChangeNotifier {
 
   Future<void> load() async {
     final file = await _file();
-    if (!await file.exists()) return;
+    final legacy = await _legacyFile();
     try {
-      final list = jsonDecode(await file.readAsString()) as List;
-      _letters
-        ..clear()
-        ..addAll(list.map((e) => Letter.fromJson(e as Map<String, dynamic>)));
-      _sort();
+      if (await file.exists()) {
+        final clear = await Vault.instance.unseal(await file.readAsBytes());
+        _fill(jsonDecode(utf8.decode(clear)) as List);
+      } else if (await legacy.exists()) {
+        // One-time upgrade: encrypt letters and photos saved before encryption existed.
+        _fill(jsonDecode(await legacy.readAsString()) as List);
+        await _encryptOldPhotos();
+        await _save();
+        await legacy.delete();
+        debugPrint('Upgraded ${_letters.length} letters to encrypted storage.');
+      }
     } catch (e) {
       // Never overwrite a diary we couldn't read: set it aside instead.
-      final stamp = DateTime.now().millisecondsSinceEpoch;
-      await file.rename('${file.path}.unreadable-$stamp');
-      debugPrint('letters.json could not be read and was set aside: $e');
+      final broken = await file.exists() ? file : legacy;
+      if (await broken.exists()) {
+        await broken.rename('${broken.path}.unreadable-${DateTime.now().millisecondsSinceEpoch}');
+      }
+      _letters.clear();
+      debugPrint('Letters could not be read and were set aside: $e');
     }
     notifyListeners();
+  }
+
+  void _fill(List list) {
+    _letters
+      ..clear()
+      ..addAll(list.map((e) => Letter.fromJson(e as Map<String, dynamic>)));
+    _sort();
+  }
+
+  Future<void> _encryptOldPhotos() async {
+    for (var i = 0; i < _letters.length; i++) {
+      final path = _letters[i].photoPath;
+      if (path == null || path.endsWith('.dtp')) continue;
+      final old = File(path);
+      if (!await old.exists()) {
+        _letters[i] = _letters[i].withPhoto(null);
+        continue;
+      }
+      final sealed = await _sealPhotoFile(_letters[i].id, old);
+      await old.delete();
+      _letters[i] = _letters[i].withPhoto(sealed);
+    }
   }
 
   /// Seals a new letter, or saves changes when the draft is an edit.
@@ -101,18 +149,32 @@ class LetterStore extends ChangeNotifier {
     return null;
   }
 
-  /// Copies a newly picked photo into our private folder, so it stays even
-  /// if the original is deleted from the gallery. A photo that's already
-  /// ours (unchanged during an edit) is kept as it is.
+  /// Encrypts a newly picked photo into our private folder. A photo that's
+  /// already ours (unchanged during an edit) is kept as it is.
   Future<String?> _keepPhoto(String id, String? path) async {
     if (path == null) return null;
     final photos = await _photosDir();
     if (path.startsWith(photos.path)) return path;
-    final name = '$id-${DateTime.now().millisecondsSinceEpoch}.jpg';
-    return (await File(path).copy('${photos.path}/$name')).path;
+
+    final picked = File(path);
+    final sealed = await _sealPhotoFile(id, picked);
+
+    // The picker left a plain copy in the app's temporary folder; remove it
+    // so no unencrypted version stays behind. (Never touches your gallery.)
+    final temp = await getTemporaryDirectory();
+    if (path.startsWith(temp.path)) await _deleteFile(path);
+    return sealed;
+  }
+
+  Future<String> _sealPhotoFile(String id, File source) async {
+    final photos = await _photosDir();
+    final out = File('${photos.path}/$id-${DateTime.now().millisecondsSinceEpoch}.dtp');
+    await out.writeAsBytes(await Vault.instance.seal(await source.readAsBytes()), flush: true);
+    return out.path;
   }
 
   Future<void> _deleteFile(String path) async {
+    PhotoCache.forget(path);
     try {
       final f = File(path);
       if (await f.exists()) await f.delete();
@@ -129,10 +191,12 @@ class LetterStore extends ChangeNotifier {
 
   Future<void> _save() async {
     final file = await _file();
+    final json = jsonEncode(_letters.map((l) => l.toJson()).toList());
+    final sealed = await Vault.instance.seal(utf8.encode(json));
     // Write to a temporary file first, then swap it in. If the phone dies
     // mid-save, the old diary is still intact.
     final tmp = File('${file.path}.tmp');
-    await tmp.writeAsString(jsonEncode(_letters.map((l) => l.toJson()).toList()), flush: true);
+    await tmp.writeAsBytes(sealed, flush: true);
     await tmp.rename(file.path);
   }
 

@@ -63,6 +63,18 @@ class Letter {
     this.photoPath,
   });
 
+  /// The same letter pointing at a different photo file.
+  Letter withPhoto(String? path) => Letter(
+        id: id,
+        date: date,
+        sealedAt: sealedAt,
+        title: title,
+        body: body,
+        mood: mood,
+        doodle: doodle,
+        photoPath: path,
+      );
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'date': date.toIso8601String(),

@@ -1,25 +1,37 @@
 import 'package:flutter/material.dart';
 import '../theme.dart';
 
-/// The big coral button with a solid navy shadow underneath.
+/// The big coral button, floating on a soft shadow.
 class ChunkyButton extends StatelessWidget {
   final String label;
   final IconData? icon;
   final VoidCallback? onTap;
   final bool busy;
+  final bool pill; // true = only as wide as its label, a bit slimmer
+  final bool soft; // true = soft blurred shadow instead of the solid navy one
 
-  const ChunkyButton({super.key, required this.label, this.icon, this.onTap, this.busy = false});
+  const ChunkyButton({
+    super.key,
+    required this.label,
+    this.icon,
+    this.onTap,
+    this.busy = false,
+    this.pill = false,
+    this.soft = true, // the soft shadow is now the default for every button
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
-        boxShadow: const [BoxShadow(color: AppColors.ink, offset: Offset(0, 4))],
+        boxShadow: soft
+            ? [BoxShadow(color: AppColors.ink.withValues(alpha: 0.18), blurRadius: 12, offset: const Offset(0, 4))]
+            : [BoxShadow(color: AppColors.ink, offset: Offset(0, pill ? 3 : 4))],
       ),
       child: SizedBox(
-        width: double.infinity,
-        height: 56,
+        width: pill ? null : double.infinity,
+        height: pill ? 50 : 56,
         child: FilledButton(
           onPressed: busy ? null : onTap,
           style: FilledButton.styleFrom(
@@ -27,6 +39,7 @@ class ChunkyButton extends StatelessWidget {
             disabledBackgroundColor: AppColors.accent.withValues(alpha: 0.7),
             foregroundColor: AppColors.white,
             shape: const StadiumBorder(),
+            padding: EdgeInsets.symmetric(horizontal: pill ? 28 : 16),
           ),
           child: busy
               ? const SizedBox(
@@ -36,7 +49,7 @@ class ChunkyButton extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (icon != null) ...[Icon(icon, color: AppColors.white), const SizedBox(width: 10)],
-                    Text(label, style: AppText.hand(24, color: AppColors.white)),
+                    Text(label, style: AppText.hand(pill ? 22 : 24, color: AppColors.white)),
                   ],
                 ),
         ),

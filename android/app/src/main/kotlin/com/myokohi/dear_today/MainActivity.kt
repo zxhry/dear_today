@@ -1,5 +1,6 @@
 package com.myokohi.dear_today
 
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 
-class MainActivity : FlutterActivity()
+// FragmentActivity is needed for the fingerprint / face / PIN prompt.
+class MainActivity : FlutterFragmentActivity()

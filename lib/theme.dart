@@ -21,12 +21,20 @@ class AppColors {
 
 /// Handwritten font for titles, friendly rounded font for body text.
 class AppText {
-  static TextStyle hand(double size, {Color color = AppColors.ink}) =>
-      GoogleFonts.gaegu(fontSize: size, fontWeight: FontWeight.w700, color: color, height: 1);
+  /// The designs were made for a 390-wide screen. On narrower phones,
+  /// text shrinks in proportion (never below 88%) so layouts keep their
+  /// breathing room. Set once from the screen width in main.dart.
+  static double fit = 1;
+  static const designWidth = 390.0;
+
+  static void fitToWidth(double width) => fit = (width / designWidth).clamp(0.88, 1.0);
+
+  static TextStyle hand(double size, {Color color = AppColors.ink}) => GoogleFonts.gaegu(
+      fontSize: size * fit, fontWeight: FontWeight.w700, color: color, height: 1);
 
   static TextStyle body(double size,
           {FontWeight weight = FontWeight.w600, Color color = AppColors.ink}) =>
-      GoogleFonts.nunito(fontSize: size, fontWeight: weight, color: color);
+      GoogleFonts.nunito(fontSize: size * fit, fontWeight: weight, color: color);
 }
 
 ThemeData buildTheme() {

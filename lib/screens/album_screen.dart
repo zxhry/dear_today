@@ -79,13 +79,16 @@ class _AlbumScreenState extends State<AlbumScreen> {
                         ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
-                  child: ChunkyButton(label: 'Write to today', icon: Icons.edit_outlined, onTap: _writeToday),
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+                  child: ChunkyButton(
+                    label: 'Write to today',
+                    icon: Icons.edit_outlined,
+                    onTap: _writeToday,
+                  ),
                 ),
               ],
             ),
           ),
-          bottomNavigationBar: const _BottomTabs(),
         );
       },
     );
@@ -195,35 +198,6 @@ class _EmptyMonth extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _BottomTabs extends StatelessWidget {
-  const _BottomTabs();
-
-  @override
-  Widget build(BuildContext context) {
-    return NavigationBarTheme(
-      data: NavigationBarThemeData(
-        backgroundColor: AppColors.white,
-        indicatorColor: AppColors.accent.withValues(alpha: 0.12),
-        labelTextStyle: WidgetStatePropertyAll(AppText.body(12, weight: FontWeight.w700)),
-      ),
-      child: NavigationBar(
-        selectedIndex: 0,
-        onDestinationSelected: (_) {},
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.grid_view_outlined),
-            selectedIcon: Icon(Icons.grid_view_rounded, color: AppColors.accent),
-            label: 'Letters',
-          ),
-          NavigationDestination(icon: Icon(Icons.calendar_month_outlined), label: 'Calendar'),
-          NavigationDestination(icon: Icon(Icons.markunread_mailbox_outlined), label: 'Mailbox'),
-          NavigationDestination(icon: Icon(Icons.person_outline), label: 'Me'),
-        ],
       ),
     );
   }

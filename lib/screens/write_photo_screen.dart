@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../models/letter.dart';
+import '../security/app_lock.dart';
 import '../theme.dart';
 import '../widgets/buttons.dart';
 import '../widgets/stamp.dart';
@@ -24,7 +25,10 @@ class _WritePhotoScreenState extends State<WritePhotoScreen> {
 
   Future<void> _pick(ImageSource source) async {
     try {
-      final file = await _picker.pickImage(source: source, maxWidth: 1600, imageQuality: 85);
+      // stepOutside: coming back from the camera/gallery shouldn't trigger the app lock.
+      final file = await AppLock.instance.stepOutside(
+        () => _picker.pickImage(source: source, maxWidth: 1600, imageQuality: 85),
+      );
       if (file != null) setState(() => draft.photoPath = file.path);
     } catch (e) {
       if (!mounted) return;
