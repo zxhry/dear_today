@@ -50,6 +50,7 @@ class MeScreen extends StatelessWidget {
     if (name != null) {
       await settings.setName(name);
       await Reminders.reschedule(); // reminders greet you by name
+      await Reminders.rescheduleMail();
     }
   }
 

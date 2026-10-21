@@ -9,6 +9,7 @@ import '../widgets/stamp.dart';
 import '../widgets/stamp_picture.dart';
 import 'letter_screen.dart';
 import 'write_photo_screen.dart';
+import '../services/day_clock.dart';
 
 /// A month grid: every day with a letter shows a tiny stamp.
 class CalendarScreen extends StatefulWidget {
@@ -40,7 +41,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: store,
+      listenable: Listenable.merge([store, DayClock.instance]),
       builder: (context, _) {
         final monthLetters = store.inMonth(_month.year, _month.month);
         final streak = store.streak;

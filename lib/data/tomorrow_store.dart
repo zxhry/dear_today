@@ -1,7 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart'; // ChangeNotifier + AppLifecycleListener
 import 'package:path_provider/path_provider.dart';
 
 import '../models/future_letter.dart';
@@ -19,11 +20,34 @@ class TomorrowStore extends ChangeNotifier {
   final List<FutureLetter> _items = [];
 
   DateTime get _today => dayOnly(DateTime.now());
-  bool isLocked(FutureLetter f) => _today.isBefore(f.openOn);
+  bool isLocked(FutureLetter f) => DateTime.now().isBefore(f.arrivesAt);
+
+  Timer? _arrival;
+  AppLifecycleListener? _life;
+
+  /// Refresh the mailbox the moment the next letter arrives, and whenever
+  /// you come back to the app (in case it arrived while you were away).
+  void _watchArrivals() {
+    _life ??= AppLifecycleListener(onResume: notifyListeners);
+    _arrival?.cancel();
+    final next = waiting.isEmpty ? null : waiting.first.arrivesAt;
+    if (next == null) return;
+    _arrival = Timer(next.difference(DateTime.now()) + const Duration(seconds: 1), () {
+      notifyListeners();
+      _watchArrivals();
+    });
+  }
+
+  @override
+  void notifyListeners() {
+    super.notifyListeners();
+    _watchArrivals();
+  }
 
   /// Still sealed, soonest first.
   List<FutureLetter> get waiting =>
-      _items.where(isLocked).toList()..sort((a, b) => a.openOn.compareTo(b.openOn));
+      // (A letter you've already read never counts as waiting.)
+      _items.where((f) => isLocked(f) && !f.opened).toList()..sort((a, b) => a.openOn.compareTo(b.openOn));
 
   /// Unlocked but not read yet: "you've got mail".
   List<FutureLetter> get arrived =>

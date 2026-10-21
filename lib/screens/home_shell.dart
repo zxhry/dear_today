@@ -6,6 +6,7 @@ import 'album_screen.dart';
 import 'calendar_screen.dart';
 import 'mailbox_screen.dart';
 import 'me_screen.dart';
+import '../services/day_clock.dart';
 
 /// Holds the four tabs and the bottom bar that switches between them.
 class HomeShell extends StatefulWidget {
@@ -39,7 +40,7 @@ class _HomeShellState extends State<HomeShell> {
         ),
         // Rebuild when mail arrives, so the Mailbox tab can show a badge.
         child: ListenableBuilder(
-          listenable: TomorrowStore.instance,
+          listenable: Listenable.merge([TomorrowStore.instance, DayClock.instance]),
           builder: (context, _) {
             final mail = TomorrowStore.instance.arrived.length;
             return NavigationBar(

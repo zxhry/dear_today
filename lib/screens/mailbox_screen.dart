@@ -14,6 +14,7 @@ import '../widgets/stamp_picture.dart';
 import 'month_letters_screen.dart';
 import 'tomorrow_letter_screen.dart';
 import 'write_tomorrow_screen.dart';
+import '../services/day_clock.dart';
 
 /// The Mailbox tab: letters to tomorrow, and each month tied into a bundle.
 class MailboxScreen extends StatelessWidget {
@@ -26,7 +27,7 @@ class MailboxScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([TomorrowStore.instance, LetterStore.instance]),
+      listenable: Listenable.merge([TomorrowStore.instance, LetterStore.instance, DayClock.instance]),
       builder: (context, _) {
         final tomorrow = TomorrowStore.instance;
         final arrived = tomorrow.arrived;
@@ -44,7 +45,16 @@ class MailboxScreen extends StatelessWidget {
               _MailboxCard(
                 arrived: arrived,
                 waiting: waiting,
-                onOpen: arrived.isEmpty ? null : () => _open(context, arrived.first),
+                onOpen: arrived.isNotEmpty
+                    ? () => _open(context, arrived.first)
+                    : waiting.isNotEmpty
+                        ? () => ScaffoldMessenger.of(context)
+                          ..hideCurrentSnackBar()
+                          ..showSnackBar(SnackBar(
+                            content: Text('Sealed until ${weekdayName(waiting.first.openOn)}, '
+                                '${clockTime(waiting.first.arrivesAt)}. No peeking! ✉'),
+                          ))
+                        : null,
               ),
               const SizedBox(height: 14),
               ChunkyButton(
@@ -128,8 +138,10 @@ class _MailboxCard extends StatelessWidget {
         children: [
           const Icon(Icons.lock_outline, size: 14, color: AppColors.inkSoft),
           const SizedBox(width: 4),
-          Text('Opens ${shortWeekday(next.openOn)}, ${next.openOn.day} ${shortMonth(next.openOn)}',
+          Flexible(
+            child: Text('Arrives ${shortWeekday(next.openOn)}, ${next.openOn.day} ${shortMonth(next.openOn)} · ${clockTime(next.arrivesAt)}',
               style: AppText.body(13, weight: FontWeight.w700, color: AppColors.inkSoft)),
+          ),
         ],
       );
     } else {

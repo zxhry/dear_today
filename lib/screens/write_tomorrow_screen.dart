@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../data/tomorrow_store.dart';
+import '../models/future_letter.dart';
+import '../services/reminders.dart';
 import '../theme.dart';
 import '../utils/dates.dart';
 import '../widgets/buttons.dart';
@@ -31,6 +33,8 @@ class _WriteTomorrowScreenState extends State<WriteTomorrowScreen> {
       return;
     }
     setState(() => _sealing = true);
+    // So we can tell you when it arrives (asks only once, if not allowed yet).
+    await Reminders.requestPermission();
     await TomorrowStore.instance.add(_body.text);
     if (!mounted) return;
     Navigator.of(context).pop();
@@ -41,6 +45,7 @@ class _WriteTomorrowScreenState extends State<WriteTomorrowScreen> {
   Widget build(BuildContext context) {
     final now = DateTime.now();
     final tomorrow = DateTime(now.year, now.month, now.day + 1);
+    final arrives = DateTime(tomorrow.year, tomorrow.month, tomorrow.day, FutureLetter.deliveryHour);
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -70,7 +75,7 @@ class _WriteTomorrowScreenState extends State<WriteTomorrowScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text('OPENS ${stampDate(tomorrow).toUpperCase()}',
+                        Text('ARRIVES ${stampDate(tomorrow).toUpperCase()} · ${clockTime(arrives).toUpperCase()}',
                             style: AppText.body(11, weight: FontWeight.w800, color: AppColors.inkSoft)
                                 .copyWith(letterSpacing: 1.4)),
                         const SizedBox(height: 10),
@@ -105,7 +110,8 @@ class _WriteTomorrowScreenState extends State<WriteTomorrowScreen> {
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          'Once sealed, it stays locked in your mailbox until ${weekdayName(tomorrow)}.',
+                          'Once sealed, it stays locked until ${weekdayName(tomorrow)} at ${clockTime(arrives)}. '
+                          'We\'ll let you know when it arrives.',
                           style: AppText.body(13, color: AppColors.inkSoft),
                         ),
                       ),

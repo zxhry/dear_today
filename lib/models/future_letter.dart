@@ -2,7 +2,7 @@
 class FutureLetter {
   final String id;
   final DateTime writtenAt;
-  final DateTime openOn; // the day it unlocks
+  final DateTime openOn; // the day it arrives (unlocks at [deliveryHour])
   final String body;
   final DateTime? openedAt; // null until you first read it
 
@@ -13,6 +13,13 @@ class FutureLetter {
     required this.body,
     this.openedAt,
   });
+
+  /// Letters to tomorrow arrive (unlock, and you get a notification) at 7:00 am.
+  /// Change this one number to move the delivery time (24-hour clock).
+  static const deliveryHour = 7;
+
+  /// The exact moment this letter arrives.
+  DateTime get arrivesAt => DateTime(openOn.year, openOn.month, openOn.day, deliveryHour);
 
   bool get opened => openedAt != null;
 

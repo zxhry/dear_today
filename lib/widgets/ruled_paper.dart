@@ -1,13 +1,21 @@
 import 'package:flutter/material.dart';
 import '../theme.dart';
 
-/// A sheet of lined writing paper.
+/// A sheet of lined writing paper. Grows with the letter, but never shorter
+/// than [minHeight].
 class RuledPaper extends StatelessWidget {
   final Widget child;
   final double lineHeight;
   final double firstLine; // how far down the first ruled line starts
+  final double minHeight; // short letters still look like a full sheet
 
-  const RuledPaper({super.key, required this.child, this.lineHeight = 30, this.firstLine = 0});
+  const RuledPaper({
+    super.key,
+    required this.child,
+    this.lineHeight = 30,
+    this.firstLine = 0,
+    this.minHeight = 0,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +27,10 @@ class RuledPaper extends StatelessWidget {
       ),
       child: CustomPaint(
         painter: _LinesPainter(lineHeight, firstLine),
-        child: Padding(padding: const EdgeInsets.fromLTRB(20, 18, 20, 16), child: child),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: minHeight),
+          child: Padding(padding: const EdgeInsets.fromLTRB(20, 18, 20, 16), child: child),
+        ),
       ),
     );
   }

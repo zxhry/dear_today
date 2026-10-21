@@ -5,8 +5,13 @@ import 'package:timezone/timezone.dart' as tz;
 
 import '../data/letter_store.dart';
 import '../data/settings_store.dart';
+import '../data/tomorrow_store.dart';
+import '../models/future_letter.dart';
+import 'day_clock.dart';
 
-/// The daily "write to today" reminder.
+/// Dear Today's notifications:
+/// - the daily "write to today" reminder, and
+/// - "you've got mail" when a letter to tomorrow arrives (at [mailHour]).
 ///
 /// Instead of one repeating alarm, it schedules the next [_daysAhead]
 /// evenings one by one, so it can skip any day you've already written.
@@ -19,6 +24,10 @@ class Reminders {
   static const _daysAhead = 14;
   static const _firstId = 100; // ids 100..113 belong to reminders
   static bool _ready = false;
+
+  static const _firstMailId = 200; // ids 200..229 belong to mail deliveries
+  static const _maxMail = 30;
+  static const mailHour = FutureLetter.deliveryHour; // same moment the letter unlocks
 
   /// True when Android lets us schedule reminders on the dot.
   static bool onTime = false;
@@ -34,6 +43,18 @@ class Reminders {
       'Daily reminder',
       channelDescription: 'A gentle nudge to write to today',
       importance: Importance.high, // high = slides down as a banner over other apps
+      priority: Priority.high,
+      icon: 'ic_stat_dear_today',
+      color: Color(0xFFC24E3B),
+    ),
+  );
+
+  static const _mailDetails = NotificationDetails(
+    android: AndroidNotificationDetails(
+      'mailbox_delivery',
+      'Mail from yesterday\'s you',
+      channelDescription: 'When a letter to tomorrow arrives in your mailbox',
+      importance: Importance.high,
       priority: Priority.high,
       icon: 'ic_stat_dear_today',
       color: Color(0xFFC24E3B),
@@ -63,7 +84,12 @@ class Reminders {
     } catch (_) {}
     // Whenever letters change (sealed, deleted, restored), refresh the plan.
     LetterStore.instance.addListener(reschedule);
+    DayClock.instance.addListener(reschedule); // a new day: plan from today again
+    // Letters to tomorrow: sealed, opened or deleted -> refresh deliveries.
+    TomorrowStore.instance.addListener(rescheduleMail);
+    DayClock.instance.addListener(rescheduleMail);
     await reschedule();
+    await rescheduleMail();
   }
 
   /// Asks Android (13+) for permission to show notifications.
@@ -80,6 +106,40 @@ class Reminders {
   static String _greeting() {
     final name = SettingsStore.instance.name;
     return 'Dear ${name.isEmpty ? 'you' : name},';
+  }
+
+  /// One "you've got mail" notification per delivery day, for letters that
+  /// haven't been opened yet. Opening a letter early cancels its notification.
+  static Future<void> rescheduleMail() async {
+    if (!_ready) return;
+    try {
+      for (var i = 0; i < _maxMail; i++) {
+        await _plugin.cancel(id: _firstMailId + i);
+      }
+      onTime = await _android?.canScheduleExactNotifications() ?? false;
+      final store = TomorrowStore.instance;
+      final days = {for (final f in [...store.waiting, ...store.arrived]) f.openOn}.toList()..sort();
+      final now = DateTime.now();
+      var n = 0;
+      for (final day in days) {
+        if (n >= _maxMail) break;
+        final at = DateTime(day.year, day.month, day.day, mailHour);
+        if (!at.isAfter(now)) continue;
+        await _plugin.zonedSchedule(
+          id: _firstMailId + n,
+          title: _greeting(),
+          body: 'A letter from yesterday\'s you has arrived in your mailbox ✉',
+          scheduledDate: tz.TZDateTime.from(at, tz.UTC),
+          notificationDetails: _mailDetails,
+          androidScheduleMode:
+              onTime ? AndroidScheduleMode.exactAllowWhileIdle : AndroidScheduleMode.inexactAllowWhileIdle,
+        );
+        debugPrint('Mail delivery planned for $at');
+        n++;
+      }
+    } catch (e) {
+      debugPrint('Could not schedule mail deliveries: $e');
+    }
   }
 
   static Future<void> reschedule() async {

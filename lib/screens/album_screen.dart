@@ -9,6 +9,7 @@ import '../widgets/letter_stamp.dart';
 import '../widgets/stamp.dart';
 import 'letter_screen.dart';
 import 'write_photo_screen.dart';
+import '../services/day_clock.dart';
 
 /// Home screen: one day's letters shown as stamps. Switch days with the
 /// arrows or by swiping. (The Calendar tab shows the whole month.)
@@ -27,6 +28,28 @@ class _AlbumScreenState extends State<AlbumScreen> {
   DateTime _day = dayOnly(DateTime.now());
 
   bool get _isToday => sameDay(_day, DateTime.now());
+
+  @override
+  void initState() {
+    super.initState();
+    DayClock.instance.addListener(_onNewDay);
+  }
+
+  @override
+  void dispose() {
+    DayClock.instance.removeListener(_onNewDay);
+    super.dispose();
+  }
+
+  // When the date changes and you were looking at "today" (now yesterday),
+  // follow along to the new today.
+  void _onNewDay() {
+    final yesterday = DateTime(DayClock.instance.today.year, DayClock.instance.today.month,
+        DayClock.instance.today.day - 1);
+    setState(() {
+      if (sameDay(_day, yesterday)) _day = DayClock.instance.today;
+    });
+  }
 
   void _shiftDay(int by) {
     final next = DateTime(_day.year, _day.month, _day.day + by);

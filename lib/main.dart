@@ -7,6 +7,7 @@ import 'security/vault.dart';
 import 'services/reminders.dart';
 import 'screens/home_shell.dart';
 import 'theme.dart';
+import 'services/day_clock.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,6 +16,7 @@ Future<void> main() async {
   await LetterStore.instance.load(); // read saved letters before showing the album
   await TomorrowStore.instance.load();
   AppLock.instance.lockIfEnabled(); // start locked if app lock is on
+  DayClock.instance.start(); // refresh "today" at midnight and on return
   try {
     await Reminders.init(); // plan the next daily reminders
   } catch (e) {
