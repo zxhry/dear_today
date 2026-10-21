@@ -30,6 +30,8 @@ class WaxSeal extends StatelessWidget {
 }
 
 class _WaxPainter extends CustomPainter {
+  final Color wax = AppColors.accent; // remembered, so a new ink colour repaints
+
   @override
   void paint(Canvas canvas, Size size) {
     final c = size.center(Offset.zero);
@@ -47,7 +49,7 @@ class _WaxPainter extends CustomPainter {
     blob.close();
 
     canvas.drawShadow(blob, AppColors.ink, 2.5, false);
-    canvas.drawPath(blob, Paint()..color = AppColors.accent);
+    canvas.drawPath(blob, Paint()..color = wax);
 
     // Pressed inner ring.
     canvas.drawCircle(
@@ -73,5 +75,5 @@ class _WaxPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(_WaxPainter old) => old.wax != wax;
 }

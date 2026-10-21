@@ -82,7 +82,7 @@ class _WriteTomorrowScreenState extends State<WriteTomorrowScreen> {
                           maxLines: null,
                           keyboardType: TextInputType.multiline,
                           textCapitalization: TextCapitalization.sentences,
-                          style: AppText.body(15, weight: FontWeight.w500).copyWith(height: 2),
+                          style: AppText.letter(),
                           decoration: InputDecoration(
                             hintText: 'Something for tomorrow-you to read…',
                             hintStyle: AppText.body(15, weight: FontWeight.w500, color: const Color(0xFF7D87A3)),

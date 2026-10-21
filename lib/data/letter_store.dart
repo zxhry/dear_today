@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
@@ -40,6 +39,32 @@ class LetterStore extends ChangeNotifier {
       day = DateTime(day.year, day.month, day.day - 1);
     }
     return count;
+  }
+
+  /// The day of your very first letter (null before you've written any).
+  DateTime? get firstLetterDate => _letters.isEmpty ? null : _letters.last.date;
+
+  /// The most days in a row you've ever written.
+  int get longestStreak {
+    final days = _letters.map((l) => dayOnly(l.date)).toSet().toList()..sort();
+    var best = 0, run = 0;
+    DateTime? prev;
+    for (final d in days) {
+      run = (prev != null && DateTime(prev.year, prev.month, prev.day + 1) == d) ? run + 1 : 1;
+      if (run > best) best = run;
+      prev = d;
+    }
+    return best;
+  }
+
+  /// How many letters had each mood, in one month (or all time if null).
+  Map<String, int> moodCounts({int? year, int? month}) {
+    final counts = {for (final m in moods) m.key: 0};
+    for (final l in _letters) {
+      if (year != null && (l.date.year != year || l.date.month != month)) continue;
+      counts[l.mood] = (counts[l.mood] ?? 0) + 1;
+    }
+    return counts;
   }
 
   /// "Letter No. 3" = the 3rd letter of that month, counting from the 1st.

@@ -202,6 +202,8 @@ class _DayCell extends StatelessWidget {
       content = Stack(
         clipBehavior: Clip.none,
         children: [
+          // One stamp per day showing the latest letter. Tap the day to see
+          // every letter from it in the card below.
           StampFrame(
             holeRadius: 1.9,
             tilt: tilt,
@@ -235,19 +237,6 @@ class _DayCell extends StatelessWidget {
               ),
             ),
           ),
-          if (letters.length > 1)
-            Positioned(
-              right: -6,
-              top: -6,
-              child: Container(
-                width: 18,
-                height: 18,
-                alignment: Alignment.center,
-                decoration: const BoxDecoration(color: AppColors.accent, shape: BoxShape.circle),
-                child: Text('${letters.length}',
-                    style: AppText.body(10, weight: FontWeight.w800, color: AppColors.white)),
-              ),
-            ),
         ],
       );
     } else {

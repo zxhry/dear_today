@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/letter_store.dart';
+import '../data/settings_store.dart';
 import '../models/letter.dart';
 import '../theme.dart';
 import '../utils/dates.dart';
@@ -136,8 +137,8 @@ class LetterScreen extends StatelessWidget {
                     const SizedBox(height: 10),
                     Text('Dear ${weekdayName(letter.date)},', style: AppText.hand(30)),
                     const SizedBox(height: 4),
-                    Text(letter.body, style: AppText.body(15, weight: FontWeight.w500).copyWith(height: 2)),
-                    Align(alignment: Alignment.centerRight, child: Text('— me', style: AppText.hand(22))),
+                    Text(letter.body, style: AppText.letter()),
+                    Align(alignment: Alignment.centerRight, child: Text('— ${SettingsStore.instance.signOff}', style: AppText.hand(22))),
                     const SizedBox(height: 6),
                     Row(
                       children: [

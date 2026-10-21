@@ -2,6 +2,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../data/settings_store.dart';
 import '../security/app_lock.dart';
 import '../security/backup.dart';
 import '../theme.dart';
@@ -25,10 +26,12 @@ Future<void> createBackupFlow(BuildContext context) async {
       subject: 'Dear Today backup',
     )),
   );
+  final saved = result.status != ShareResultStatus.dismissed;
+  if (saved) await SettingsStore.instance.markBackedUp();
   messenger.showSnackBar(SnackBar(
-    content: Text(result.status == ShareResultStatus.dismissed
-        ? 'Backup wasn\'t saved anywhere. Try again when you\'re ready.'
-        : 'Backup saved. Keep your password somewhere safe!'),
+    content: Text(saved
+        ? 'Backup saved. Keep your password somewhere safe!'
+        : 'Backup wasn\'t saved anywhere. Try again when you\'re ready.'),
   ));
 }
 

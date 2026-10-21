@@ -210,6 +210,7 @@ class _MailboxPainter extends CustomPainter {
   final double flagAngle;
   final bool hasMail;
   final bool sleepy;
+  final Color ink = AppColors.accent; // remembered, so a new ink colour repaints
   _MailboxPainter({required this.flagAngle, required this.hasMail, required this.sleepy});
 
   @override
@@ -331,7 +332,7 @@ class _MailboxPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_MailboxPainter old) =>
-      old.flagAngle != flagAngle || old.hasMail != hasMail || old.sleepy != sleepy;
+      old.flagAngle != flagAngle || old.hasMail != hasMail || old.sleepy != sleepy || old.ink != ink;
 }
 
 class _BundleCard extends StatelessWidget {

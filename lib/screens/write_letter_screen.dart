@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/letter_store.dart';
+import '../data/settings_store.dart';
 import '../models/letter.dart';
 import '../theme.dart';
 import '../utils/dates.dart';
@@ -130,7 +131,7 @@ class _WriteLetterScreenState extends State<WriteLetterScreen> {
                           maxLines: null,
                           keyboardType: TextInputType.multiline,
                           textCapitalization: TextCapitalization.sentences,
-                          style: AppText.body(15, weight: FontWeight.w500).copyWith(height: 2),
+                          style: AppText.letter(),
                           decoration: InputDecoration(
                             hintText: 'Tell today what happened…',
                             hintStyle: hintStyle,
@@ -141,7 +142,7 @@ class _WriteLetterScreenState extends State<WriteLetterScreen> {
                         ),
                         Align(
                           alignment: Alignment.centerRight,
-                          child: Text('— me', style: AppText.hand(22, color: const Color(0xFF7D87A3))),
+                          child: Text('— ${SettingsStore.instance.signOff}', style: AppText.hand(22, color: const Color(0xFF7D87A3))),
                         ),
                       ],
                     ),

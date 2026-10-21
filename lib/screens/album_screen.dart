@@ -10,7 +10,8 @@ import '../widgets/stamp.dart';
 import 'letter_screen.dart';
 import 'write_photo_screen.dart';
 
-/// Home screen: one month of letters shown as a sheet of stamps.
+/// Home screen: one day's letters shown as stamps. Switch days with the
+/// arrows or by swiping. (The Calendar tab shows the whole month.)
 class AlbumScreen extends StatefulWidget {
   const AlbumScreen({super.key});
 
@@ -23,22 +24,26 @@ class _AlbumScreenState extends State<AlbumScreen> {
   static const _tilts = [-2.0, 1.5, 2.2, 1.8, -1.5, -2.2, -1.8, 2.0, 1.8];
 
   final store = LetterStore.instance;
-  DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
+  DateTime _day = dayOnly(DateTime.now());
 
-  bool get _isCurrentMonth {
-    final now = DateTime.now();
-    return _month.year == now.year && _month.month == now.month;
+  bool get _isToday => sameDay(_day, DateTime.now());
+
+  void _shiftDay(int by) {
+    final next = DateTime(_day.year, _day.month, _day.day + by);
+    if (next.isAfter(dayOnly(DateTime.now()))) return; // no future days
+    setState(() => _day = next);
   }
-
-  void _shiftMonth(int by) => setState(() => _month = DateTime(_month.year, _month.month + by));
 
   void _openLetter(Letter letter) => Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => LetterScreen(letter: letter)),
       );
 
-  void _writeToday() => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => WritePhotoScreen(draft: LetterDraft(date: DateTime.now()))),
-      );
+  void _writeToday() {
+    setState(() => _day = dayOnly(DateTime.now())); // show today, where the new letter will appear
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => WritePhotoScreen(draft: LetterDraft(date: DateTime.now()))),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,46 +51,62 @@ class _AlbumScreenState extends State<AlbumScreen> {
     return ListenableBuilder(
       listenable: store,
       builder: (context, _) {
-        final letters = store.inMonth(_month.year, _month.month);
+        final letters = store.forDay(_day);
 
         return Scaffold(
           body: SafeArea(
             child: Column(
               children: [
                 const _Header(),
-                _MonthSwitcher(
-                  month: _month,
+                _DaySwitcher(
+                  day: _day,
+                  isToday: _isToday,
                   count: letters.length,
-                  onPrev: () => _shiftMonth(-1),
-                  onNext: _isCurrentMonth ? null : () => _shiftMonth(1),
+                  onPrev: () => _shiftDay(-1),
+                  onNext: _isToday ? null : () => _shiftDay(1),
                 ),
                 Expanded(
-                  child: letters.isEmpty
-                      ? _EmptyMonth(isCurrent: _isCurrentMonth, month: _month)
-                      : GridView.builder(
-                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 3,
-                            mainAxisSpacing: 16,
-                            crossAxisSpacing: 14,
-                            childAspectRatio: 0.8,
-                          ),
-                          itemCount: letters.length,
-                          itemBuilder: (context, i) => LetterStamp(
-                            letter: letters[i],
-                            tilt: _tilts[i % _tilts.length],
-                            onTap: () => _openLetter(letters[i]),
-                          ),
-                        ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
-                  child: ChunkyButton(
-                    label: 'Write to today',
-                    icon: Icons.edit_outlined,
-                    onTap: _writeToday,
+                  // Swipe right for the day before, left for the day after.
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onHorizontalDragEnd: (d) {
+                      final v = d.primaryVelocity ?? 0;
+                      if (v > 300) _shiftDay(-1);
+                      if (v < -300) _shiftDay(1);
+                    },
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      child: letters.isEmpty
+                          ? _EmptyDay(key: ValueKey('empty-$_day'), isToday: _isToday, day: _day)
+                          : GridView.builder(
+                              key: ValueKey('day-$_day'),
+                              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 3,
+                                mainAxisSpacing: 16,
+                                crossAxisSpacing: 14,
+                                childAspectRatio: 0.8,
+                              ),
+                              itemCount: letters.length,
+                              itemBuilder: (context, i) => LetterStamp(
+                                letter: letters[i],
+                                tilt: _tilts[i % _tilts.length],
+                                onTap: () => _openLetter(letters[i]),
+                              ),
+                            ),
+                    ),
                   ),
                 ),
+                // Writing is only for today, so the button only shows on today's page.
+                if (_isToday)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+                    child: ChunkyButton(
+                      label: 'Write to today',
+                      icon: Icons.edit_outlined,
+                      onTap: _writeToday,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -101,58 +122,61 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 12, 4),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
       child: Row(
         children: [
           const Icon(Icons.mail_outline_rounded, size: 34, color: AppColors.ink),
           const SizedBox(width: 10),
           Expanded(child: Text('Dear Today,', style: AppText.hand(38))),
-          IconButton(
-            tooltip: 'Search letters',
-            onPressed: () {},
-            style: IconButton.styleFrom(
-              backgroundColor: AppColors.white,
-              side: const BorderSide(color: AppColors.ink, width: 1.5),
-            ),
-            icon: const Icon(Icons.search, color: AppColors.ink),
-          ),
         ],
       ),
     );
   }
 }
 
-class _MonthSwitcher extends StatelessWidget {
-  final DateTime month;
+class _DaySwitcher extends StatelessWidget {
+  final DateTime day;
+  final bool isToday;
   final int count;
   final VoidCallback onPrev;
   final VoidCallback? onNext; // null = can't go into the future
 
-  const _MonthSwitcher({required this.month, required this.count, required this.onPrev, this.onNext});
+  const _DaySwitcher({
+    required this.day,
+    required this.isToday,
+    required this.count,
+    required this.onPrev,
+    this.onNext,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final yesterday = sameDay(day, DateTime.now().subtract(const Duration(days: 1)));
+    final tag = isToday ? 'Today · ' : (yesterday ? 'Yesterday · ' : '');
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: Row(
         children: [
           IconButton(
-            tooltip: 'Previous month',
+            tooltip: 'Previous day',
             onPressed: onPrev,
             icon: const Icon(Icons.chevron_left, color: AppColors.ink),
           ),
           Expanded(
             child: Column(
               children: [
-                Text(monthYear(month), style: AppText.hand(26)),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text('${weekdayName(day)}, ${day.day} ${shortMonth(day)}', style: AppText.hand(26)),
+                ),
                 const SizedBox(height: 2),
-                Text('$count ${count == 1 ? 'letter' : 'letters'} sealed',
+                Text('$tag$count ${count == 1 ? 'letter' : 'letters'} sealed',
                     style: AppText.body(13, color: AppColors.inkSoft)),
               ],
             ),
           ),
           IconButton(
-            tooltip: 'Next month',
+            tooltip: 'Next day',
             onPressed: onNext,
             icon: Icon(Icons.chevron_right, color: onNext == null ? const Color(0xFFB8C1D6) : AppColors.ink),
           ),
@@ -162,10 +186,10 @@ class _MonthSwitcher extends StatelessWidget {
   }
 }
 
-class _EmptyMonth extends StatelessWidget {
-  final bool isCurrent;
-  final DateTime month;
-  const _EmptyMonth({required this.isCurrent, required this.month});
+class _EmptyDay extends StatelessWidget {
+  final bool isToday;
+  final DateTime day;
+  const _EmptyDay({super.key, required this.isToday, required this.day});
 
   @override
   Widget build(BuildContext context) {
@@ -186,13 +210,11 @@ class _EmptyMonth extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            Text(isCurrent ? 'Your first stamp is waiting' : 'No letters in ${monthName(month)}',
+            Text(isToday ? 'Today\'s stamp is waiting' : 'No letter on ${weekdayName(day)}',
                 textAlign: TextAlign.center, style: AppText.hand(26)),
             const SizedBox(height: 6),
             Text(
-              isCurrent
-                  ? 'Tap "Write to today" to seal this month\'s first letter.'
-                  : 'This page of your album is still blank.',
+              isToday ? 'Tap "Write to today" to seal today\'s first letter.' : 'This day\'s page is blank.',
               textAlign: TextAlign.center,
               style: AppText.body(14, color: AppColors.inkSoft),
             ),

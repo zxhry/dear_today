@@ -95,7 +95,7 @@ class _TomorrowLetterScreenState extends State<TomorrowLetterScreen> {
                         const SizedBox(height: 30),
                         Text('Dear Tomorrow,', style: AppText.hand(30)),
                         const SizedBox(height: 4),
-                        Text(l.body, style: AppText.body(15, weight: FontWeight.w500).copyWith(height: 2)),
+                        Text(l.body, style: AppText.letter()),
                         Align(
                           alignment: Alignment.centerRight,
                           child: Text('— ${weekdayName(l.writtenAt)}\'s me', style: AppText.hand(22)),
