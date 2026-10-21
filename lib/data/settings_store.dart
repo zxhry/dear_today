@@ -26,6 +26,7 @@ class SettingsStore extends ChangeNotifier {
   bool reminderOn = false;
   int reminderHour = 21; // 9:00 pm
   int reminderMinute = 0;
+  bool tourSeen = false; // the first-time tour has been shown
 
   File? _file;
   Future<File> _settingsFile() async =>
@@ -35,6 +36,7 @@ class SettingsStore extends ChangeNotifier {
     try {
       final f = await _settingsFile();
       if (await f.exists()) {
+        // (Someone who used the app before the tour existed has seen it all already.)
         final j = jsonDecode(await f.readAsString()) as Map<String, dynamic>;
         lockEnabled = j['lockEnabled'] as bool? ?? false;
         name = j['name'] as String? ?? '';
@@ -48,6 +50,7 @@ class SettingsStore extends ChangeNotifier {
         reminderOn = j['reminderOn'] as bool? ?? false;
         reminderHour = (j['reminderHour'] as int? ?? 21).clamp(0, 23);
         reminderMinute = (j['reminderMinute'] as int? ?? 0).clamp(0, 59);
+        tourSeen = j['tourSeen'] as bool? ?? true;
         if (avatarPath != null && !await File(avatarPath!).exists()) avatarPath = null;
       }
     } catch (e) {
@@ -73,6 +76,7 @@ class SettingsStore extends ChangeNotifier {
   Future<void> setInk(int i) => _update(() => ink = i);
   Future<void> setPaper(int i) => _update(() => paper = i);
   Future<void> setTextSize(int i) => _update(() => textSize = i);
+  Future<void> setTourSeen(bool v) => _update(() => tourSeen = v);
   Future<void> markBackedUp() => _update(() => lastBackupAt = DateTime.now());
   Future<void> setReminder({required bool on, int? hour, int? minute}) => _update(() {
         reminderOn = on;
@@ -131,6 +135,7 @@ class SettingsStore extends ChangeNotifier {
         'reminderOn': reminderOn,
         'reminderHour': reminderHour,
         'reminderMinute': reminderMinute,
+        'tourSeen': tourSeen,
       }),
       flush: true,
     );

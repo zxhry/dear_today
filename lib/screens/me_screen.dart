@@ -276,6 +276,19 @@ class MeScreen extends StatelessWidget {
                     ),
                   ),
               ]),
+              const SizedBox(height: 22),
+
+              const _SectionTitle('Help'),
+              _Card(children: [
+                ListTile(
+                  leading: const Icon(Icons.tour_outlined, color: AppColors.ink),
+                  title: Text('Replay the tour', style: AppText.body(15, weight: FontWeight.w800)),
+                  subtitle: Text('A quick look around Dear Today',
+                      style: AppText.body(12, weight: FontWeight.w500, color: AppColors.inkSoft)),
+                  trailing: const Icon(Icons.chevron_right, color: AppColors.ink),
+                  onTap: () => SettingsStore.instance.setTourSeen(false),
+                ),
+              ]),
               const SizedBox(height: 26),
 
               const _About(),

@@ -7,6 +7,7 @@ import '../utils/dates.dart';
 import '../widgets/buttons.dart';
 import '../widgets/letter_stamp.dart';
 import '../widgets/stamp.dart';
+import '../widgets/tour_overlay.dart';
 import 'letter_screen.dart';
 import 'write_photo_screen.dart';
 import '../services/day_clock.dart';
@@ -82,6 +83,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
               children: [
                 const _Header(),
                 _DaySwitcher(
+                  key: TourTargets.days, // the tour points here
                   day: _day,
                   isToday: _isToday,
                   count: letters.length,
@@ -125,6 +127,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
                     child: ChunkyButton(
+                      key: TourTargets.write, // the tour points here
                       label: 'Write to today',
                       icon: Icons.edit_outlined,
                       onTap: _writeToday,
@@ -165,6 +168,7 @@ class _DaySwitcher extends StatelessWidget {
   final VoidCallback? onNext; // null = can't go into the future
 
   const _DaySwitcher({
+    super.key,
     required this.day,
     required this.isToday,
     required this.count,

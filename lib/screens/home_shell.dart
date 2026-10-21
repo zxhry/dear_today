@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/settings_store.dart';
 import '../data/tomorrow_store.dart';
 import '../theme.dart';
 import 'album_screen.dart';
@@ -7,6 +8,7 @@ import 'calendar_screen.dart';
 import 'mailbox_screen.dart';
 import 'me_screen.dart';
 import '../services/day_clock.dart';
+import '../widgets/tour_overlay.dart';
 
 /// Holds the four tabs and the bottom bar that switches between them.
 class HomeShell extends StatefulWidget {
@@ -18,9 +20,43 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   int _tab = 0;
+  final _settings = SettingsStore.instance;
+  late bool _touring = !_settings.tourSeen;
+
+  @override
+  void initState() {
+    super.initState();
+    _settings.addListener(_onSettings);
+  }
+
+  @override
+  void dispose() {
+    _settings.removeListener(_onSettings);
+    super.dispose();
+  }
+
+  // "Replay the tour" in the Me tab turns the tour back on.
+  void _onSettings() {
+    final touring = !_settings.tourSeen;
+    if (touring != _touring) {
+      setState(() {
+        _touring = touring;
+        if (touring) _tab = 0; // the tour starts on the Letters page
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        _app(context),
+        if (_touring) Positioned.fill(child: TourOverlay(onFinish: () => _settings.setTourSeen(true))),
+      ],
+    );
+  }
+
+  Widget _app(BuildContext context) {
     return Scaffold(
       // IndexedStack keeps each tab alive, so switching back doesn't reset it.
       body: IndexedStack(
@@ -44,6 +80,7 @@ class _HomeShellState extends State<HomeShell> {
           builder: (context, _) {
             final mail = TomorrowStore.instance.arrived.length;
             return NavigationBar(
+              key: TourTargets.nav, // the tour points at its tabs
               selectedIndex: _tab,
               onDestinationSelected: (i) => setState(() => _tab = i),
               destinations: [
