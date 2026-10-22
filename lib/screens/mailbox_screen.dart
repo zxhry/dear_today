@@ -38,10 +38,10 @@ class MailboxScreen extends StatelessWidget {
 
         return SafeArea(
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+            padding: const EdgeInsets.fromLTRB(20, 30, 20, 24),
             children: [
-              Text('My mailbox', style: AppText.hand(40)),
-              const SizedBox(height: 16),
+              Text('My mailbox', style: AppText.hand(34)),
+              const SizedBox(height: 18),
               _MailboxCard(
                 arrived: arrived,
                 waiting: waiting,
@@ -64,13 +64,13 @@ class MailboxScreen extends StatelessWidget {
                   MaterialPageRoute(builder: (_) => const WriteTomorrowScreen()),
                 ),
               ),
-              const SizedBox(height: 26),
+              const SizedBox(height: 28),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Expanded(child: Text('Monthly bundles', style: AppText.hand(28))),
+                  Expanded(child: Text('Monthly bundles', style: AppText.hand(24))),
                   Text('$total ${total == 1 ? 'letter' : 'letters'} in all',
-                      style: AppText.body(12, color: AppColors.inkSoft)),
+                      style: AppText.body(12, color: _Soft.text)),
                 ],
               ),
               const SizedBox(height: 10),
@@ -80,13 +80,24 @@ class MailboxScreen extends StatelessWidget {
               else
                 for (final b in bundles) ...[
                   _BundleCard(bundle: b),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                 ],
               if (read.isNotEmpty) ...[
-                const SizedBox(height: 14),
-                Text('From yesterday\'s you', style: AppText.hand(28)),
-                const SizedBox(height: 8),
-                for (final f in read) _ReadRow(letter: f, onTap: () => _open(context, f)),
+                const SizedBox(height: 18),
+                Text('From yesterday\'s you', style: AppText.hand(24)),
+                const SizedBox(height: 10),
+                // All read letters together in one soft card.
+                _SoftCard(
+                  child: Column(
+                    children: [
+                      for (var i = 0; i < read.length; i++) ...[
+                        if (i > 0)
+                          const Divider(height: 1, thickness: 1, indent: 14, endIndent: 14, color: Color(0x0F22305A)),
+                        _ReadRow(letter: read[i], onTap: () => _open(context, read[i])),
+                      ],
+                    ],
+                  ),
+                ),
               ],
             ],
           ),
@@ -129,25 +140,25 @@ class _MailboxCard extends StatelessWidget {
     if (hasMail) {
       label = 'FLAG IS UP';
       headline = arrived.length == 1 ? 'A letter from yesterday\'s you!' : '${arrived.length} letters have arrived!';
-      detail = Text('Tap to open', style: AppText.body(13, weight: FontWeight.w800, color: AppColors.accent));
+      detail = Text('Tap to open', style: AppText.body(12, weight: FontWeight.w800, color: AppColors.accent));
     } else if (waiting.isNotEmpty) {
       final next = waiting.first;
       label = 'SEALED';
       headline = waiting.length == 1 ? 'A letter to tomorrow is waiting' : '${waiting.length} letters are waiting';
       detail = Row(
         children: [
-          const Icon(Icons.lock_outline, size: 14, color: AppColors.inkSoft),
-          const SizedBox(width: 4),
+          const Icon(Icons.lock_outline, size: 12, color: _Soft.text),
+          const SizedBox(width: 5),
           Flexible(
             child: Text('Arrives ${shortWeekday(next.openOn)}, ${next.openOn.day} ${shortMonth(next.openOn)} · ${clockTime(next.arrivesAt)}',
-              style: AppText.body(13, weight: FontWeight.w700, color: AppColors.inkSoft)),
+              style: AppText.body(12, weight: FontWeight.w600, color: _Soft.text)),
           ),
         ],
       );
     } else {
       label = 'EMPTY MAILBOX';
       headline = 'Nothing waiting yet';
-      detail = Text('Write a note for tomorrow-you to find.', style: AppText.body(13, color: AppColors.inkSoft));
+      detail = Text('Write a note for tomorrow-you to find.', style: AppText.body(12, color: _Soft.text));
     }
 
     return Semantics(
@@ -155,15 +166,19 @@ class _MailboxCard extends StatelessWidget {
       label: '$headline. ${hasMail ? 'Tap to open.' : ''}',
       child: Material(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(16),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onOpen,
           child: Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: hasMail ? AppColors.accent : AppColors.ink.withValues(alpha: 0.12), width: hasMail ? 2 : 1),
+              borderRadius: BorderRadius.circular(16),
+              // A gentle coral edge only when mail has arrived.
+              border: Border.all(
+                color: hasMail ? AppColors.accent.withValues(alpha: 0.45) : _Soft.border,
+                width: hasMail ? 1.5 : 1,
+              ),
             ),
             child: ExcludeSemantics(
               child: Row(
@@ -175,10 +190,10 @@ class _MailboxCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(label,
-                            style: AppText.body(11, weight: FontWeight.w800, color: AppColors.accent)
-                                .copyWith(letterSpacing: 1.4)),
+                            style: AppText.body(10, weight: FontWeight.w800, color: hasMail ? AppColors.accent : _Soft.faint)
+                                .copyWith(letterSpacing: 1.6)),
                         const SizedBox(height: 4),
-                        Text(headline, style: AppText.hand(24)),
+                        Text(headline, style: AppText.hand(22).copyWith(height: 1.05)),
                         const SizedBox(height: 6),
                         detail,
                       ],
@@ -211,7 +226,7 @@ class _MailboxDrawing extends StatelessWidget {
       duration: const Duration(milliseconds: 700),
       curve: Curves.elasticOut,
       builder: (context, angle, _) => CustomPaint(
-        size: const Size(92, 94),
+        size: const Size(72, 74), // drawn on a 92 x 94 grid, then scaled down
         painter: _MailboxPainter(flagAngle: angle, hasMail: flagUp, sleepy: sleepy && !flagUp),
       ),
     );
@@ -227,18 +242,23 @@ class _MailboxPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    canvas.scale(size.width / 92);
+    const line = Color(0xFF7C87A6); // soft grey-blue instead of navy
     final ink = Paint()
-      ..color = AppColors.ink
+      ..color = line
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5
+      ..strokeWidth = 2
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
     final fill = Paint()..style = PaintingStyle.fill;
 
     // Ground and post.
-    canvas.drawLine(const Offset(16, 91), const Offset(70, 91), ink);
+    canvas.drawLine(const Offset(16, 91), const Offset(70, 91), Paint()
+      ..color = _Soft.faint
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round);
     final post = RRect.fromLTRBR(37, 60, 47, 91, const Radius.circular(2));
-    canvas.drawRRect(post, fill..color = AppColors.ink);
+    canvas.drawRRect(post, fill..color = _Soft.faint);
 
     // Body: a box with a rounded, bread-loaf top.
     final body = Path()
@@ -247,14 +267,14 @@ class _MailboxPainter extends CustomPainter {
       ..arcToPoint(const Offset(72, 32), radius: const Radius.circular(30))
       ..lineTo(72, 62)
       ..close();
-    canvas.drawPath(body, fill..color = AppColors.sky);
+    canvas.drawPath(body, fill..color = const Color(0xFFDCEAF3));
     canvas.drawPath(body, ink);
 
     // Mail slot, with an envelope peeking out when mail has arrived.
     if (hasMail) {
       final env = RRect.fromLTRBR(31, 40, 53, 54, const Radius.circular(1.5));
       canvas.drawRRect(env, fill..color = AppColors.white);
-      canvas.drawRRect(env, ink..strokeWidth = 2);
+      canvas.drawRRect(env, ink..strokeWidth = 1.8);
       canvas.drawPath(
         Path()
           ..moveTo(31.5, 41)
@@ -266,11 +286,11 @@ class _MailboxPainter extends CustomPainter {
     }
     final slot = RRect.fromLTRBR(26, 52, 58, 57, const Radius.circular(2.5));
     canvas.drawRRect(slot, fill..color = AppColors.white);
-    canvas.drawRRect(slot, ink..strokeWidth = 2.2);
-    ink.strokeWidth = 2.5;
+    canvas.drawRRect(slot, ink..strokeWidth = 1.8);
+    ink.strokeWidth = 2;
 
     // Blush.
-    fill.color = const Color(0xFFF6B7A8);
+    fill.color = const Color(0xFFF6C6BA);
     canvas.drawOval(Rect.fromCenter(center: const Offset(23, 33), width: 7, height: 4.5), fill);
     canvas.drawOval(Rect.fromCenter(center: const Offset(61, 33), width: 7, height: 4.5), fill);
 
@@ -282,25 +302,25 @@ class _MailboxPainter extends CustomPainter {
           Path()
             ..moveTo(x - 3.5, 27)
             ..quadraticBezierTo(x, 30.5, x + 3.5, 27),
-          ink..strokeWidth = 2,
+          ink..strokeWidth = 1.8,
         );
       }
     } else {
       for (final x in [31.0, 53.0]) {
         final r = hasMail ? 3.3 : 2.6; // bigger, sparkly eyes when mail has come
-        canvas.drawCircle(Offset(x, 28), r, fill..color = AppColors.ink);
+        canvas.drawCircle(Offset(x, 28), r, fill..color = line);
         canvas.drawCircle(Offset(x + 1, 27), r * 0.35, fill..color = AppColors.white);
       }
     }
 
     // Mouth: a big open smile with mail, a small one otherwise.
-    ink.strokeWidth = 2;
+    ink.strokeWidth = 1.8;
     if (hasMail) {
       final mouth = Path()
         ..moveTo(37, 33)
         ..quadraticBezierTo(42, 40, 47, 33)
         ..close();
-      canvas.drawPath(mouth, fill..color = AppColors.ink);
+      canvas.drawPath(mouth, fill..color = line);
     } else {
       canvas.drawPath(
         Path()
@@ -320,9 +340,9 @@ class _MailboxPainter extends CustomPainter {
             ..lineTo(x, y + s)
             ..lineTo(x + s, y + s),
           Paint()
-            ..color = AppColors.inkSoft
+            ..color = const Color(0xFFAEB5CA)
             ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.6
+            ..strokeWidth = 1.4
             ..strokeCap = StrokeCap.round,
         );
       }
@@ -334,12 +354,12 @@ class _MailboxPainter extends CustomPainter {
     canvas.save();
     canvas.translate(72, 46);
     canvas.rotate(flagAngle);
-    canvas.drawLine(Offset.zero, const Offset(0, -20), ink..strokeWidth = 2.5);
+    canvas.drawLine(Offset.zero, const Offset(0, -20), ink..strokeWidth = 2);
     final flag = RRect.fromLTRBR(0, -21, 13, -12, const Radius.circular(2));
-    canvas.drawRRect(flag, fill..color = AppColors.accent);
-    canvas.drawRRect(flag, ink..strokeWidth = 2);
+    // Soft coral while waiting, full coral when mail has arrived.
+    canvas.drawRRect(flag, fill..color = hasMail ? AppColors.accent : const Color(0xFFEBA899));
     canvas.restore();
-    canvas.drawCircle(const Offset(72, 46), 2.6, fill..color = AppColors.ink);
+    canvas.drawCircle(const Offset(72, 46), 2.2, fill..color = line);
   }
 
   @override
@@ -351,7 +371,8 @@ class _BundleCard extends StatelessWidget {
   final _Bundle bundle;
   const _BundleCard({required this.bundle});
 
-  static const _fan = [(-10.0, 0.0, 6.0), (3.0, 22.0, 2.0), (12.0, 44.0, 8.0)]; // (tilt, left, top)
+  // (tilt, left, top) — tops balanced so the fan sits in the middle of the card.
+  static const _fan = [(-10.0, 0.0, 3.0), (3.0, 22.0, 0.0), (12.0, 44.0, 4.0)];
 
   @override
   Widget build(BuildContext context) {
@@ -365,35 +386,29 @@ class _BundleCard extends StatelessWidget {
       label: '${monthYear(bundle.month)}, $n ${n == 1 ? 'letter' : 'letters'}',
       child: Material(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(14),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => MonthLettersScreen(month: bundle.month)),
           ),
           child: Container(
-            height: 84,
+            height: 76,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: isCurrent ? AppColors.accent : AppColors.ink, width: isCurrent ? 2 : 1.5),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: _Soft.border),
             ),
             child: ExcludeSemantics(
               child: Stack(
+                alignment: Alignment.centerLeft, // keep everything centred top-to-bottom in the card
                 children: [
-                  // The string tying the bundle.
-                  const Positioned(
-                    left: 0,
-                    right: 0,
-                    top: 41,
-                    child: ColoredBox(color: Color(0xFFE3C9A8), child: SizedBox(height: 2)),
-                  ),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
                     child: Row(
                       children: [
                         SizedBox(
-                          width: 92,
-                          height: 70,
+                          width: 84,
+                          height: 62,
                           child: Stack(
                             children: [
                               for (var i = 0; i < shown.length; i++)
@@ -428,24 +443,27 @@ class _BundleCard extends StatelessWidget {
                               children: [
                                 Text(
                                   bundle.month.year == now.year ? monthName(bundle.month) : monthYear(bundle.month),
-                                  style: AppText.hand(24),
+                                  style: AppText.hand(22),
                                 ),
                                 const SizedBox(height: 2),
-                                Text('$n ${n == 1 ? 'letter' : 'letters'}, tied with string',
-                                    style: AppText.body(12, color: AppColors.inkSoft)),
+                                Text('$n ${n == 1 ? 'letter' : 'letters'}',
+                                    style: AppText.body(12, color: _Soft.text)),
                               ],
                             ),
                           ),
                         ),
                         if (isCurrent)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(color: AppColors.accent, borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppColors.accent.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                             child: Text('This month',
-                                style: AppText.body(11, weight: FontWeight.w800, color: AppColors.white)),
+                                style: AppText.body(11, weight: FontWeight.w800, color: const Color(0xFFA8432F))),
                           ),
                         const SizedBox(width: 4),
-                        const Icon(Icons.chevron_right, color: AppColors.ink),
+                        const Icon(Icons.chevron_right, size: 18, color: _Soft.faint),
                       ],
                     ),
                   ),
@@ -468,27 +486,56 @@ class _ReadRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(6),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(
           children: [
-            const Icon(Icons.drafts_outlined, color: AppColors.ink),
+            const Icon(Icons.drafts_outlined, size: 20, color: _Soft.faint),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Written ${longDate(letter.writtenAt)}',
-                      style: AppText.body(12, weight: FontWeight.w800, color: AppColors.inkSoft)),
+                  Text(longDate(letter.writtenAt),
+                      style: AppText.body(11, weight: FontWeight.w700, color: const Color(0xFF8A93AE))),
+                  const SizedBox(height: 1),
                   Text(letter.body, maxLines: 1, overflow: TextOverflow.ellipsis,
                       style: AppText.body(14, weight: FontWeight.w500)),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: AppColors.ink),
+            const Icon(Icons.chevron_right, size: 16, color: _Soft.faint),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// The softer palette used on the Mailbox page.
+class _Soft {
+  static const text = Color(0xFF6B7593); // secondary text
+  static const faint = Color(0xFF9AA3BD); // icons, chevrons, quiet labels
+  static const border = Color(0x1222305A); // barely-there card edge
+}
+
+/// A plain white card with a barely-there edge.
+class _SoftCard extends StatelessWidget {
+  final Widget child;
+  const _SoftCard({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.white,
+      borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: _Soft.border),
+        ),
+        child: child,
       ),
     );
   }

@@ -77,12 +77,13 @@ class _SealedScreenState extends State<SealedScreen> with SingleTickerProviderSt
                   // Envelope.
                   Positioned.fill(
                     child: Container(
+                      clipBehavior: Clip.antiAlias, // keep the flap inside the rounded corners
                       decoration: BoxDecoration(
                         color: AppColors.white,
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.edge),
                         boxShadow: [
-                          BoxShadow(color: AppColors.ink.withValues(alpha: 0.16), blurRadius: 18, offset: const Offset(0, 8)),
-                          BoxShadow(color: AppColors.ink.withValues(alpha: 0.12), offset: const Offset(0, 3)),
+                          BoxShadow(color: AppColors.ink.withValues(alpha: 0.10), blurRadius: 20, offset: const Offset(0, 8)),
                         ],
                       ),
                       child: CustomPaint(painter: _FlapPainter()),
@@ -195,8 +196,8 @@ class _FlapPainter extends CustomPainter {
     canvas.drawPath(
       flap,
       Paint()
-        ..color = AppColors.ink
-        ..strokeWidth = 2
+        ..color = AppColors.iconSoft
+        ..strokeWidth = 1.5
         ..style = PaintingStyle.stroke
         ..strokeJoin = StrokeJoin.round,
     );

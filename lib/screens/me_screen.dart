@@ -143,10 +143,10 @@ class MeScreen extends StatelessWidget {
 
         return SafeArea(
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
+            padding: const EdgeInsets.fromLTRB(20, 30, 20, 28),
             children: [
-              Text('Me', style: AppText.hand(42)),
-              const SizedBox(height: 16),
+              Text('Me', style: AppText.hand(34)),
+              const SizedBox(height: 18),
               _ProfileCard(
                 name: s.name,
                 avatarPath: s.avatarPath,
@@ -535,7 +535,14 @@ class _MoodChart extends StatelessWidget {
   final Map<String, int> counts;
   const _MoodChart({required this.month, required this.counts});
 
-  static const _tints = [AppColors.lavender, Color(0xFFE6E9F0), AppColors.peach, AppColors.butter, AppColors.sage];
+  // One clear pastel per mood: Down, Meh, Cosy, Happy, Excited.
+  static const _tints = [
+    Color(0xFFB9C2EC), // periwinkle
+    Color(0xFFC9CFDB), // soft grey-blue
+    Color(0xFFF3B3A3), // peach
+    Color(0xFFF4D57A), // butter
+    Color(0xFFA9D6B0), // mint
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -580,10 +587,7 @@ class _MoodChart extends StatelessWidget {
                             width: 26,
                             height: most == 0 ? 4 : 4 + (maxBar - 4) * (counts[moods[i].key] ?? 0) / most,
                             decoration: BoxDecoration(
-                              // The most-felt mood gets a soft wash of the ink colour.
-                              color: most > 0 && (counts[moods[i].key] ?? 0) == most
-                                  ? AppColors.accent.withValues(alpha: 0.35)
-                                  : _tints[i],
+                              color: _tints[i],
                               borderRadius: const BorderRadius.vertical(top: Radius.circular(6), bottom: Radius.circular(2)),
                             ),
                           ),

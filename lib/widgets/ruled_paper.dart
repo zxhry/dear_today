@@ -20,10 +20,11 @@ class RuledPaper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      clipBehavior: Clip.antiAlias, // keep the ruled lines inside the rounded corners
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(4),
-        boxShadow: [BoxShadow(color: AppColors.ink.withValues(alpha: 0.12), offset: const Offset(0, 3))],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.edge),
       ),
       child: CustomPaint(
         painter: _LinesPainter(lineHeight, firstLine),

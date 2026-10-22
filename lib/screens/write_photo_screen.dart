@@ -51,16 +51,16 @@ class _WritePhotoScreenState extends State<WritePhotoScreen> {
             ),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
                 child: Column(
                   children: [
-                    Text('What moment is today?', textAlign: TextAlign.center, style: AppText.hand(32)),
+                    Text('What moment is today?', textAlign: TextAlign.center, style: AppText.hand(28)),
                     const SizedBox(height: 6),
                     Text('Pick one photo. It becomes today\'s stamp.',
                         textAlign: TextAlign.center, style: AppText.body(14, color: AppColors.inkSoft)),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 18),
                     _BigStamp(draft: draft, onTapEmpty: () => _pick(ImageSource.gallery)),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
                     Row(
                       children: [
                         Expanded(
@@ -80,7 +80,7 @@ class _WritePhotoScreenState extends State<WritePhotoScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 22),
+                    const SizedBox(height: 18),
                     Text('No photo today? Pick a doodle stamp',
                         style: AppText.body(13, weight: FontWeight.w700, color: AppColors.inkSoft)),
                     const SizedBox(height: 10),
@@ -132,7 +132,7 @@ class _BigStamp extends StatelessWidget {
       holeRadius: 5,
       tilt: -2,
       child: SizedBox(
-        width: 220,
+        width: 186,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -179,17 +179,18 @@ class _DoodleChoice extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: Container(
-          width: 52,
-          height: 52,
+          width: 48,
+          height: 48,
           decoration: BoxDecoration(
             color: doodle.tint,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
+            // No outline normally; a gentle coral ring when chosen.
             border: Border.all(
-              color: selected ? AppColors.accent : AppColors.ink,
-              width: selected ? 3 : 1.5,
+              color: selected ? AppColors.accent : Colors.transparent,
+              width: 2,
             ),
           ),
-          child: Icon(doodle.icon, color: AppColors.ink),
+          child: Icon(doodle.icon, size: 22, color: AppColors.ink.withValues(alpha: 0.75)),
         ),
       ),
     );

@@ -294,11 +294,12 @@ class _DayCard extends StatelessWidget {
     final isToday = sameDay(day, DateTime.now());
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+      // Soft rounded card with a barely-there edge, like the Mailbox page.
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(6),
-        boxShadow: [BoxShadow(color: AppColors.ink.withValues(alpha: 0.12), offset: const Offset(0, 3))],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0x1222305A)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -13,6 +13,11 @@ class AppColors {
   static const white = Color(0xFFFFFFFF);
   static const divider = Color(0xFF9AA6C4);
 
+  // Soft tones for quiet outlines and icons (used on all the gentler pages).
+  static const line = Color(0xFFD5DAE6); // light outline for buttons, tiles, circles
+  static const edge = Color(0x1222305A); // barely-there card edge
+  static const iconSoft = Color(0xFF7C87A6); // grey-blue icons
+
   // Soft photo-placeholder tints for the stamps.
   static const sky = Color(0xFFCFE3EF);
   static const peach = Color(0xFFF6D7C8);

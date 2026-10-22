@@ -69,20 +69,20 @@ class SoftButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 52,
+      height: 48,
       child: OutlinedButton(
         onPressed: onTap,
         style: OutlinedButton.styleFrom(
           backgroundColor: AppColors.white,
           foregroundColor: AppColors.ink,
-          side: const BorderSide(color: AppColors.ink, width: 2),
+          side: const BorderSide(color: AppColors.line, width: 1.5),
           shape: const StadiumBorder(),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (icon != null) ...[Icon(icon, size: 20), const SizedBox(width: 8)],
-            Text(label, style: AppText.hand(22)),
+            if (icon != null) ...[Icon(icon, size: 19, color: AppColors.iconSoft), const SizedBox(width: 8)],
+            Text(label, style: AppText.hand(20)),
           ],
         ),
       ),

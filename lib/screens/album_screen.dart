@@ -148,12 +148,12 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+      padding: const EdgeInsets.fromLTRB(20, 30, 20, 8),
       child: Row(
         children: [
-          const Icon(Icons.mail_outline_rounded, size: 34, color: AppColors.ink),
+          const Icon(Icons.mail_outline_rounded, size: 30, color: AppColors.ink),
           const SizedBox(width: 10),
-          Expanded(child: Text('Dear Today,', style: AppText.hand(38))),
+          Expanded(child: Text('Dear Today,', style: AppText.hand(34))),
         ],
       ),
     );
