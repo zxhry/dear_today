@@ -72,4 +72,4 @@ Only Android is tested. The app relies on Android notifications and biometrics.
 
 ---
 
-Made by [myokohi](https://github.com/zxhry) · [MIT License](LICENSE)
+Made by [myok0hi](https://github.com/zxhry) · [MIT License](LICENSE)

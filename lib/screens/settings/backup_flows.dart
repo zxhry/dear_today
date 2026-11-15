@@ -1,11 +1,13 @@
+import 'dart:io';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../data/settings_store.dart';
-import '../security/app_lock.dart';
-import '../security/backup.dart';
-import '../theme.dart';
+import '../../data/settings_store.dart';
+import '../../security/app_lock.dart';
+import '../../security/backup.dart';
+import '../../theme.dart';
 
 /// Create a backup: choose a password, seal everything, then share the file
 /// to wherever you keep it (Google Drive, Telegram, your laptop...).
@@ -21,10 +23,7 @@ Future<void> createBackupFlow(BuildContext context) async {
   if (file == null || !context.mounted) return;
 
   final result = await AppLock.instance.stepOutside(
-    () => SharePlus.instance.share(ShareParams(
-      files: [XFile(file.path)],
-      subject: 'Dear Today backup',
-    )),
+    () => SharePlus.instance.share(ShareParams(files: [XFile(file.path)], subject: 'Dear Today backup')),
   );
   final saved = result.status != ShareResultStatus.dismissed;
   if (saved) await SettingsStore.instance.markBackedUp();
@@ -35,18 +34,14 @@ Future<void> createBackupFlow(BuildContext context) async {
   ));
 }
 
-/// Restore: pick a .dtb file, enter its password, and add its letters.
+/// Restore: pick a .dtb file, enter its password, and add what's in it.
 Future<void> restoreBackupFlow(BuildContext context) async {
   final messenger = ScaffoldMessenger.of(context);
   final picked = await AppLock.instance.stepOutside(() => FilePicker.pickFile());
   if (picked == null || !context.mounted) return;
-
-  final bytes = await picked.readAsBytes();
-  if (!context.mounted) return;
-  if (!Backup.looksLikeBackup(bytes)) {
-    await _showProblem(context, 'This isn\'t a Dear Today backup file. Backup files end in .dtb.');
-    return;
-  }
+  // (The picker's result type differs between file_picker versions; both have a path.)
+  final path = (picked as dynamic).path as String?;
+  if (path == null) return;
 
   final password = await showDialog<String>(
     context: context,
@@ -54,20 +49,17 @@ Future<void> restoreBackupFlow(BuildContext context) async {
   );
   if (password == null || !context.mounted) return;
 
-  final result = await _withProgress(context, 'Opening your backup…', () => Backup.restore(bytes, password));
-  if (result == null) return;
-  final (added, skipped) = result;
+  final added = await _withProgress(context, 'Opening your backup…', () => Backup.restore(File(path), password));
+  if (added == null) return;
   messenger.showSnackBar(SnackBar(
-    content: Text(added == 0
-        ? 'All ${skipped == 1 ? 'that letter is' : 'those letters are'} already here.'
-        : 'Restored $added ${added == 1 ? 'letter' : 'letters'}'
-            '${skipped > 0 ? ' ($skipped already here)' : ''}.'),
+    content: Text(added == 0 ? 'Everything in that backup is already here.' : 'Restored $added ${added == 1 ? 'item' : 'items'}.'),
   ));
 }
 
 /// Shows a "please wait" dialog while [work] runs. Returns null on failure
 /// (after showing what went wrong).
 Future<T?> _withProgress<T>(BuildContext context, String message, Future<T> Function() work) async {
+  final t = context.dt;
   final nav = Navigator.of(context, rootNavigator: true);
   showDialog<void>(
     context: context,
@@ -79,7 +71,7 @@ Future<T?> _withProgress<T>(BuildContext context, String message, Future<T> Func
           children: [
             const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5)),
             const SizedBox(width: 18),
-            Expanded(child: Text(message, style: AppText.body(15))),
+            Expanded(child: Text(message, style: Fonts.sans(15, t.text))),
           ],
         ),
       ),
@@ -100,20 +92,19 @@ Future<T?> _withProgress<T>(BuildContext context, String message, Future<T> Func
   } catch (e) {
     close();
     if (context.mounted) {
-      await _showProblem(context, e is BackupException ? e.message : 'Something went wrong: $e');
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Hmm…', style: Fonts.serif(24, t.text)),
+          content: Text(e is BackupException ? e.message : 'Something went wrong: $e',
+              style: Fonts.sans(14, t.muted, height: 1.45)),
+          actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
+        ),
+      );
     }
     return null;
   }
 }
-
-Future<void> _showProblem(BuildContext context, String message) => showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Hmm…', style: AppText.hand(28)),
-        content: Text(message, style: AppText.body(14, weight: FontWeight.w500)),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
-      ),
-    );
 
 class _PasswordDialog extends StatefulWidget {
   final bool creating; // true = choose a new password (typed twice)
@@ -156,6 +147,7 @@ class _PasswordDialogState extends State<_PasswordDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.dt;
     InputDecoration deco(String label) => InputDecoration(
           labelText: label,
           border: const OutlineInputBorder(),
@@ -167,7 +159,7 @@ class _PasswordDialogState extends State<_PasswordDialog> {
         );
 
     return AlertDialog(
-      title: Text(widget.creating ? 'Lock your backup' : 'Open your backup', style: AppText.hand(28)),
+      title: Text(widget.creating ? 'Lock your backup' : 'Open your backup', style: Fonts.serif(24, t.text)),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -175,9 +167,9 @@ class _PasswordDialogState extends State<_PasswordDialog> {
           children: [
             Text(
               widget.creating
-                  ? 'Choose a password for this backup. You\'ll need it to restore your letters on any phone.'
+                  ? 'Choose a password for this backup. You\'ll need it to restore your stamps, diary and vlog on any phone.'
                   : 'Enter the password you chose when you made this backup.',
-              style: AppText.body(13, weight: FontWeight.w500),
+              style: Fonts.sans(13, t.muted, height: 1.45),
             ),
             const SizedBox(height: 14),
             TextField(
@@ -198,30 +190,26 @@ class _PasswordDialogState extends State<_PasswordDialog> {
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColors.accent.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(8),
-                ),
+                decoration: BoxDecoration(color: t.surf2, borderRadius: BorderRadius.circular(8)),
                 child: Text(
                   'If you forget this password, nobody can open the backup, not even you. '
                   'Write it down somewhere safe.',
-                  style: AppText.body(12, weight: FontWeight.w700, color: AppColors.accent),
+                  style: Fonts.sans(12, t.text, weight: FontWeight.w600, height: 1.4),
                 ),
               ),
             ],
             if (_error != null) ...[
               const SizedBox(height: 10),
-              Text(_error!, style: AppText.body(13, color: AppColors.accent)),
+              Text(_error!, style: Fonts.sans(13, t.accent, weight: FontWeight.w600)),
             ],
           ],
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-        FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: AppColors.accent),
+        TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel', style: Fonts.sans(14, t.muted))),
+        TextButton(
           onPressed: _submit,
-          child: Text(widget.creating ? 'Create backup' : 'Restore'),
+          child: Text(widget.creating ? 'Create backup' : 'Restore', style: Fonts.sans(14, t.text, weight: FontWeight.w700)),
         ),
       ],
     );

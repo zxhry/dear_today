@@ -1,85 +1,180 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// All of Dear Today's colours live here, so the whole look can be
-/// changed from one place.
-class AppColors {
-  // Ink (accent) and paper (background) can be changed in the Me tab.
-  static Color accent = inks.first.color;
-  static Color paper = papers.first.color;
+/// Dear Today's colours ("soft plum"), for the light and the dark theme.
+///
+/// Screens read them with `context.dt`, so every colour follows the theme
+/// chosen in Settings (Light, Dark or System).
+@immutable
+class DT extends ThemeExtension<DT> {
+  final Color bg; // page background
+  final Color surf; // cards, buttons, bars
+  final Color surf2; // selected tab, small icon tiles
+  final Color border; // quiet outlines
+  final Color text; // main text
+  final Color muted; // secondary text
+  final Color accent; // tab underline, record ring, switches
+  final Color fabBg; // main buttons (Save, Share, the round + button)
+  final Color fabFg; // text and icons on main buttons
+  final Color ink; // postmark ink
+  final Color dim; // empty slots, inactive outlines
+  final Color stampPaper; // the paper around a stamp's photo
+  final Color shadow;
+  final Color seg1, seg2, seg3; // storage bar: stamps, diary, vlog
 
-  static const ink = Color(0xFF22305A); // navy "ink" for text and lines
-  static const inkSoft = Color(0xFF4A5577); // secondary text
-  static const white = Color(0xFFFFFFFF);
-  static const divider = Color(0xFF9AA6C4);
+  const DT({
+    required this.bg,
+    required this.surf,
+    required this.surf2,
+    required this.border,
+    required this.text,
+    required this.muted,
+    required this.accent,
+    required this.fabBg,
+    required this.fabFg,
+    required this.ink,
+    required this.dim,
+    required this.stampPaper,
+    required this.shadow,
+    required this.seg1,
+    required this.seg2,
+    required this.seg3,
+  });
 
-  // Soft tones for quiet outlines and icons (used on all the gentler pages).
-  static const line = Color(0xFFD5DAE6); // light outline for buttons, tiles, circles
-  static const edge = Color(0x1222305A); // barely-there card edge
-  static const iconSoft = Color(0xFF7C87A6); // grey-blue icons
+  static const light = DT(
+    bg: Color(0xFFFBF7F5),
+    surf: Color(0xFFFFFFFF),
+    surf2: Color(0xFFF6E6DF),
+    border: Color(0xFFEDE3DF),
+    text: Color(0xFF190019),
+    muted: Color(0xFF6B5468),
+    accent: Color(0xFF854F6C),
+    fabBg: Color(0xFF2B124C),
+    fabFg: Color(0xFFFFFFFF),
+    ink: Color(0xFF2B124C),
+    dim: Color(0xFFDFCBCB),
+    stampPaper: Color(0xFFFFFFFF),
+    shadow: Color(0x14190019),
+    seg1: Color(0xFF2B124C),
+    seg2: Color(0xFF854F6C),
+    seg3: Color(0xFFDFB6B2),
+  );
 
-  // Soft photo-placeholder tints for the stamps.
-  static const sky = Color(0xFFCFE3EF);
-  static const peach = Color(0xFFF6D7C8);
-  static const lavender = Color(0xFFD9DDF2);
-  static const butter = Color(0xFFF7E7B4);
-  static const sage = Color(0xFFD6E6D2);
+  static const dark = DT(
+    bg: Color(0xFF190019),
+    surf: Color(0xFF241A2A),
+    surf2: Color(0xFF3A2B40),
+    border: Color(0xFF33263A),
+    text: Color(0xFFF5EAE4),
+    muted: Color(0xFFC9B3B4),
+    accent: Color(0xFFDFB6B2),
+    fabBg: Color(0xFFFBE4D8),
+    fabFg: Color(0xFF190019),
+    ink: Color(0xFFDFB6B2),
+    dim: Color(0xFF4A3A50),
+    stampPaper: Color(0xFFFBE4D8),
+    shadow: Color(0x73000000),
+    seg1: Color(0xFFFBE4D8),
+    seg2: Color(0xFFB9799A),
+    seg3: Color(0xFF6E4A75),
+  );
 
-  static const inks = [
-    NamedColor('Coral', Color(0xFFC24E3B)),
-    NamedColor('Ocean', Color(0xFF3E6FB0)),
-    NamedColor('Leaf', Color(0xFF4F7F40)),
-    NamedColor('Plum', Color(0xFF8A56A8)),
+  /// Soft photo-placeholder tones (used before a photo has loaded).
+  static const tones = [
+    Color(0xFF9FB4C7),
+    Color(0xFFD9A77C),
+    Color(0xFF8EA68B),
+    Color(0xFFC9B79C),
+    Color(0xFF7D8FA8),
+    Color(0xFFD58C7A),
+    Color(0xFFB7C4A0),
+    Color(0xFFA39BC2),
   ];
-  static const papers = [
-    NamedColor('Cream', Color(0xFFF7EEE4)),
-    NamedColor('Sky', Color(0xFFE9F0F7)),
-    NamedColor('Mint', Color(0xFFEEF4EA)),
-    NamedColor('Lilac', Color(0xFFF3EDF7)),
-  ];
+
+  /// The viewfinder colour while the camera is starting.
+  static const viewfinder = Color(0xFF3B2A4A);
+
+  @override
+  DT copyWith() => this;
+
+  @override
+  DT lerp(ThemeExtension<DT>? other, double t) {
+    if (other is! DT) return this;
+    Color c(Color a, Color b) => Color.lerp(a, b, t)!;
+    return DT(
+      bg: c(bg, other.bg),
+      surf: c(surf, other.surf),
+      surf2: c(surf2, other.surf2),
+      border: c(border, other.border),
+      text: c(text, other.text),
+      muted: c(muted, other.muted),
+      accent: c(accent, other.accent),
+      fabBg: c(fabBg, other.fabBg),
+      fabFg: c(fabFg, other.fabFg),
+      ink: c(ink, other.ink),
+      dim: c(dim, other.dim),
+      stampPaper: c(stampPaper, other.stampPaper),
+      shadow: c(shadow, other.shadow),
+      seg1: c(seg1, other.seg1),
+      seg2: c(seg2, other.seg2),
+      seg3: c(seg3, other.seg3),
+    );
+  }
 }
 
-class NamedColor {
-  final String name;
-  final Color color;
-  const NamedColor(this.name, this.color);
+extension DTContext on BuildContext {
+  DT get dt => Theme.of(this).extension<DT>()!;
 }
 
-/// Handwritten font for titles, friendly rounded font for body text.
-class AppText {
-  /// The designs were made for a 390-wide screen. On narrower phones,
-  /// text shrinks in proportion (never below 88%) so layouts keep their
-  /// breathing room. Set once from the screen width in main.dart.
-  static double fit = 1;
-  static const designWidth = 390.0;
+/// The three fonts: a serif for titles, Inter for everything else, and a
+/// typewriter-style mono for labels, times and diary text.
+class Fonts {
+  static TextStyle serif(double size, Color color) => GoogleFonts.newsreader(
+      fontSize: size, fontWeight: FontWeight.w500, color: color, height: 1.15, letterSpacing: -0.2);
 
-  static void fitToWidth(double width) => fit = (width / designWidth).clamp(0.88, 1.0);
+  static TextStyle sans(double size, Color color, {FontWeight weight = FontWeight.w400, double? height}) =>
+      GoogleFonts.inter(fontSize: size, fontWeight: weight, color: color, height: height);
 
-  /// Extra scale for letter text only (Small / Default / Large in the Me tab).
-  static double letterScale = 1;
-  static const letterScales = [0.88, 1.0, 1.15];
-  static const letterScaleNames = ['Small', 'Default', 'Large'];
+  static TextStyle mono(double size, Color color, {double spacing = 0, double? height}) =>
+      GoogleFonts.ibmPlexMono(
+          fontSize: size, fontWeight: FontWeight.w500, color: color, letterSpacing: spacing, height: height);
 
-  /// The text of a letter: body font, roomy lines, follows letter text size.
-  static TextStyle letter({Color color = AppColors.ink}) =>
-      body(15 * letterScale, weight: FontWeight.w500, color: color).copyWith(height: 2);
-
-  static TextStyle hand(double size, {Color color = AppColors.ink}) => GoogleFonts.gaegu(
-      fontSize: size * fit, fontWeight: FontWeight.w700, color: color, height: 1);
-
-  static TextStyle body(double size,
-          {FontWeight weight = FontWeight.w600, Color color = AppColors.ink}) =>
-      GoogleFonts.nunito(fontSize: size * fit, fontWeight: weight, color: color);
+  /// Small capital labels like "DEAR TODAY" or "EARLIER".
+  static TextStyle label(Color color) => mono(11.5, color, spacing: 1.4);
 }
 
-ThemeData buildTheme() {
-  return ThemeData(
-    scaffoldBackgroundColor: AppColors.paper,
+ThemeData buildTheme(Brightness brightness) {
+  final t = brightness == Brightness.dark ? DT.dark : DT.light;
+  final base = ThemeData(brightness: brightness, useMaterial3: true, fontFamily: GoogleFonts.inter().fontFamily);
+  return base.copyWith(
+    scaffoldBackgroundColor: t.bg,
     colorScheme: ColorScheme.fromSeed(
-      seedColor: AppColors.accent,
-      surface: AppColors.paper,
+      seedColor: t.accent,
+      brightness: brightness,
+      surface: t.surf,
+      primary: t.fabBg,
+      onPrimary: t.fabFg,
     ),
-    fontFamily: GoogleFonts.nunito().fontFamily,
-    useMaterial3: true,
+    textTheme: base.textTheme.apply(bodyColor: t.text, displayColor: t.text),
+    dialogTheme: DialogThemeData(backgroundColor: t.surf, surfaceTintColor: Colors.transparent),
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: t.surf,
+      surfaceTintColor: Colors.transparent,
+      showDragHandle: true,
+      dragHandleColor: t.dim,
+    ),
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: t.fabBg,
+      contentTextStyle: Fonts.sans(14, t.fabFg),
+      behavior: SnackBarBehavior.floating,
+    ),
+    switchTheme: SwitchThemeData(
+      thumbColor: const WidgetStatePropertyAll(Colors.white),
+      trackColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? t.accent : t.dim),
+      trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
+    ),
+    progressIndicatorTheme: ProgressIndicatorThemeData(color: t.accent),
+    textSelectionTheme: TextSelectionThemeData(cursorColor: t.accent, selectionHandleColor: t.accent),
+    extensions: [t],
   );
 }

@@ -52,4 +52,11 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // Making the day's vlog: joins clips and draws each clip's time on it.
+    // (Same Media3 version for every part, including the video player's.)
+    val media3 = "1.10.1"
+    implementation("androidx.media3:media3-transformer:$media3")
+    implementation("androidx.media3:media3-effect:$media3")
+    implementation("androidx.media3:media3-common:$media3")
+    implementation("androidx.media3:media3-exoplayer:$media3")
 }

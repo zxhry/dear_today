@@ -1,29 +1,39 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:dear_today/models/letter.dart';
+import 'package:dear_today/models/models.dart';
 import 'package:dear_today/utils/dates.dart';
 
 void main() {
-  test('letters survive a save/load round trip', () {
-    final original = Letter(
+  test('stamps survive a save/load round trip', () {
+    final original = Stamp(
       id: '1',
-      date: DateTime(2026, 10, 20),
-      sealedAt: DateTime(2026, 10, 20, 17, 42),
-      title: 'First rain',
-      body: 'Waited out the rain at the café.',
-      mood: 'cosy',
-      doodle: 'rainy',
+      takenAt: DateTime(2026, 11, 14, 18, 42),
+      title: 'Rain cleared before sunset',
+      place: 'Home',
+      setId: null,
+      photoPath: '/x/1.dtp',
+      shape: StampShape.square,
     );
-    final copy = Letter.fromJson(original.toJson());
+    final copy = Stamp.fromJson(original.toJson());
     expect(copy.title, original.title);
-    expect(copy.body, original.body);
-    expect(copy.date, original.date);
-    expect(copy.photoPath, isNull);
+    expect(copy.takenAt, original.takenAt);
+    expect(copy.shape, StampShape.square);
+    expect(copy.setId, isNull);
+  });
+
+  test('diary entries and clips survive a round trip', () {
+    final e = DiaryEntry(id: '2', at: DateTime(2026, 11, 15, 13, 15), text: 'kopi after the lab', photos: const ['a.dtp']);
+    expect(DiaryEntry.fromJson(e.toJson()).photos, ['a.dtp']);
+    final c = VlogClip(id: '3', recordedAt: DateTime(2026, 11, 15, 18, 58), durationMs: 5000, path: 'c.dtv', quality: '720p');
+    expect(VlogClip.fromJson(c.toJson()).duration, const Duration(seconds: 5));
   });
 
   test('date helpers', () {
-    final d = DateTime(2026, 10, 20, 17, 42);
-    expect(weekdayName(d), 'Tuesday');
-    expect(stampDate(d), 'Tue · 20 Oct 2026');
-    expect(clockTime(d), '5:42 pm');
+    final d = DateTime(2026, 11, 15, 18, 58);
+    expect(shortDate(d), 'Sun, 15 Nov');
+    expect(clockTime(d), '6:58 PM');
+    expect(postmarkDate(d), '15 NOV 26');
+    expect(ordinal(5), '5th');
+    expect(ordinal(22), '22nd');
+    expect(fileSize(1240000000), '1.24 GB');
   });
 }

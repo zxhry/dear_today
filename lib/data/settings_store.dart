@@ -1,32 +1,20 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
-import '../security/vault.dart';
-import '../theme.dart';
-import '../widgets/vault_image.dart';
-
-/// App settings (app lock, name, sign-off, colours, text size...), saved in
-/// the app's private folder. Changing the look updates AppColors/AppText and
-/// tells the app to redraw.
+/// App settings, saved in the app's private folder (settings.json).
 class SettingsStore extends ChangeNotifier {
   SettingsStore._();
   static final instance = SettingsStore._();
 
+  ThemeMode themeMode = ThemeMode.system;
   bool lockEnabled = false;
-  String name = '';
-  String signOff = 'me';
-  int ink = 0;
-  int paper = 0;
-  int textSize = 1; // 0 Small, 1 Default, 2 Large
+  String vlogQuality = '720p'; // '720p' (smaller) or '1080p' (sharper)
+  bool saveToGallery = false; // also keep a plain copy in the phone's gallery
+  int clipSeconds = 5; // 3, 5 or 10
   DateTime? lastBackupAt;
-  String? avatarPath; // your profile picture, encrypted (.dtp)
-  bool reminderOn = false;
-  int reminderHour = 21; // 9:00 pm
-  int reminderMinute = 0;
-  bool tourSeen = false; // the first-time tour has been shown
 
   File? _file;
   Future<File> _settingsFile() async =>
@@ -35,109 +23,44 @@ class SettingsStore extends ChangeNotifier {
   Future<void> load() async {
     try {
       final f = await _settingsFile();
-      if (await f.exists()) {
-        // (Someone who used the app before the tour existed has seen it all already.)
-        final j = jsonDecode(await f.readAsString()) as Map<String, dynamic>;
-        lockEnabled = j['lockEnabled'] as bool? ?? false;
-        name = j['name'] as String? ?? '';
-        signOff = j['signOff'] as String? ?? 'me';
-        ink = _index(j['ink'], AppColors.inks.length);
-        paper = _index(j['paper'], AppColors.papers.length);
-        textSize = _index(j['textSize'], AppText.letterScales.length, fallback: 1);
-        final b = j['lastBackupAt'] as String?;
-        lastBackupAt = b == null ? null : DateTime.tryParse(b);
-        avatarPath = j['avatarPath'] as String?;
-        reminderOn = j['reminderOn'] as bool? ?? false;
-        reminderHour = (j['reminderHour'] as int? ?? 21).clamp(0, 23);
-        reminderMinute = (j['reminderMinute'] as int? ?? 0).clamp(0, 59);
-        tourSeen = j['tourSeen'] as bool? ?? true;
-        if (avatarPath != null && !await File(avatarPath!).exists()) avatarPath = null;
-      }
+      if (!await f.exists()) return;
+      final j = jsonDecode(await f.readAsString()) as Map<String, dynamic>;
+      themeMode = ThemeMode.values.firstWhere((m) => m.name == j['themeMode'], orElse: () => ThemeMode.system);
+      lockEnabled = j['lockEnabled'] as bool? ?? false; // kept from the letters version
+      vlogQuality = j['vlogQuality'] == '1080p' ? '1080p' : '720p';
+      saveToGallery = j['saveToGallery'] as bool? ?? false;
+      final secs = j['clipSeconds'] as int? ?? 5;
+      clipSeconds = const [3, 5, 10].contains(secs) ? secs : 5;
+      final b = j['lastBackupAt'] as String?;
+      lastBackupAt = b == null ? null : DateTime.tryParse(b);
     } catch (e) {
       debugPrint('settings.json could not be read: $e');
     }
-    _applyLook();
   }
 
-  static int _index(Object? v, int length, {int fallback = 0}) {
-    final i = v is int ? v : fallback;
-    return (i >= 0 && i < length) ? i : fallback;
-  }
-
-  void _applyLook() {
-    AppColors.accent = AppColors.inks[ink].color;
-    AppColors.paper = AppColors.papers[paper].color;
-    AppText.letterScale = AppText.letterScales[textSize];
-  }
-
+  Future<void> setThemeMode(ThemeMode m) => _update(() => themeMode = m);
   Future<void> setLockEnabled(bool v) => _update(() => lockEnabled = v);
-  Future<void> setName(String v) => _update(() => name = v.trim());
-  Future<void> setSignOff(String v) => _update(() => signOff = v.trim().isEmpty ? 'me' : v.trim());
-  Future<void> setInk(int i) => _update(() => ink = i);
-  Future<void> setPaper(int i) => _update(() => paper = i);
-  Future<void> setTextSize(int i) => _update(() => textSize = i);
-  Future<void> setTourSeen(bool v) => _update(() => tourSeen = v);
+  Future<void> setVlogQuality(String q) => _update(() => vlogQuality = q);
+  Future<void> setSaveToGallery(bool v) => _update(() => saveToGallery = v);
+  Future<void> setClipSeconds(int s) => _update(() => clipSeconds = s);
   Future<void> markBackedUp() => _update(() => lastBackupAt = DateTime.now());
-  Future<void> setReminder({required bool on, int? hour, int? minute}) => _update(() {
-        reminderOn = on;
-        reminderHour = hour ?? reminderHour;
-        reminderMinute = minute ?? reminderMinute;
-      });
-
-  /// Encrypts a picked photo as your profile picture (replacing the old one).
-  Future<void> setAvatarFrom(String pickedPath) async {
-    final docs = await getApplicationDocumentsDirectory();
-    final picked = File(pickedPath);
-    final out = File('${docs.path}/avatar-${DateTime.now().millisecondsSinceEpoch}.dtp');
-    await out.writeAsBytes(await Vault.instance.seal(await picked.readAsBytes()), flush: true);
-
-    // Don't leave a plain copy behind in the picker's temporary folder.
-    final temp = await getTemporaryDirectory();
-    if (pickedPath.startsWith(temp.path)) await _deleteQuietly(pickedPath);
-
-    final old = avatarPath;
-    await _update(() => avatarPath = out.path);
-    if (old != null) await _deleteQuietly(old);
-  }
-
-  /// Back to the little smiley.
-  Future<void> removeAvatar() async {
-    final old = avatarPath;
-    await _update(() => avatarPath = null);
-    if (old != null) await _deleteQuietly(old);
-  }
-
-  Future<void> _deleteQuietly(String path) async {
-    PhotoCache.forget(path);
-    try {
-      final f = File(path);
-      if (await f.exists()) await f.delete();
-    } catch (e) {
-      debugPrint('Could not delete $path: $e');
-    }
-  }
 
   Future<void> _update(void Function() change) async {
     change();
-    _applyLook();
     notifyListeners();
     final f = await _settingsFile();
-    await f.writeAsString(
+    final tmp = File('${f.path}.tmp');
+    await tmp.writeAsString(
       jsonEncode({
+        'themeMode': themeMode.name,
         'lockEnabled': lockEnabled,
-        'name': name,
-        'signOff': signOff,
-        'ink': ink,
-        'paper': paper,
-        'textSize': textSize,
+        'vlogQuality': vlogQuality,
+        'saveToGallery': saveToGallery,
+        'clipSeconds': clipSeconds,
         'lastBackupAt': lastBackupAt?.toIso8601String(),
-        'avatarPath': avatarPath,
-        'reminderOn': reminderOn,
-        'reminderHour': reminderHour,
-        'reminderMinute': reminderMinute,
-        'tourSeen': tourSeen,
       }),
       flush: true,
     );
+    await tmp.rename(f.path);
   }
 }

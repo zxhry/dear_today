@@ -3,7 +3,7 @@ import 'package:local_auth/local_auth.dart';
 
 import '../data/settings_store.dart';
 import '../theme.dart';
-import '../widgets/buttons.dart';
+import '../widgets/ui.dart';
 
 /// Decides when Dear Today is locked, and unlocks it with the phone's own
 /// fingerprint / face / PIN screen. The app never sees the fingerprint or
@@ -18,7 +18,7 @@ class AppLock extends ChangeNotifier {
   final _auth = LocalAuthentication();
   bool _locked = false;
   bool _busy = false; // the PIN screen can briefly send us to the background
-  int _tripsOutside = 0; // our own trips to the camera or gallery
+  int _tripsOutside = 0; // our own trips to the camera, gallery or share sheet
   DateTime? _leftAt;
   String? lastError;
 
@@ -65,12 +65,12 @@ class AppLock extends ChangeNotifier {
   }
 
   Future<void> unlock() async {
-    if (await verify('Unlock your letters')) _locked = false;
+    if (await verify('Unlock Dear Today')) _locked = false;
     notifyListeners();
   }
 
-  /// For actions that leave the app on purpose (camera, gallery), so coming
-  /// back from them doesn't lock you out mid-letter.
+  /// For actions that leave the app on purpose (gallery, share sheet), so
+  /// coming back from them doesn't lock you out halfway.
   Future<T> stepOutside<T>(Future<T> Function() action) async {
     _tripsOutside++;
     try {
@@ -128,7 +128,7 @@ class _AppLockGateState extends State<AppLockGate> {
         final locked = AppLock.instance.locked;
         return Stack(
           children: [
-            // The app stays alive underneath (so an unfinished letter isn't
+            // The app stays alive underneath (so an unfinished note isn't
             // lost), but hidden and silent while locked.
             Offstage(offstage: locked, child: ExcludeSemantics(excluding: locked, child: widget.child)),
             if (locked) const _LockScreen(),
@@ -139,69 +139,50 @@ class _AppLockGateState extends State<AppLockGate> {
   }
 }
 
-class _LockScreen extends StatefulWidget {
+class _LockScreen extends StatelessWidget {
   const _LockScreen();
 
   @override
-  State<_LockScreen> createState() => _LockScreenState();
-}
-
-class _LockScreenState extends State<_LockScreen> {
-  // The lock page waits for a tap on "Unlock" before asking for the PIN.
-  @override
   Widget build(BuildContext context) {
-    // Listen to AppLock so an error message appears after a failed try.
-    return ListenableBuilder(listenable: AppLock.instance, builder: (context, _) => _content());
-  }
-
-  Widget _content() {
-    final error = AppLock.instance.lastError;
-    return Material(
-      color: AppColors.paper,
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Column(
-            children: [
-              const Spacer(flex: 3),
-              // Sealed envelope.
-              Stack(
-                clipBehavior: Clip.none,
+    final t = context.dt;
+    return ListenableBuilder(
+      listenable: AppLock.instance,
+      builder: (context, _) {
+        final error = AppLock.instance.lastError;
+        return Material(
+          color: t.bg,
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Column(
                 children: [
-                  const Icon(Icons.mail_outline_rounded, size: 96, color: AppColors.ink),
-                  Positioned(
-                    right: -6,
-                    bottom: 8,
-                    child: Container(
-                      width: 38,
-                      height: 38,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: AppColors.accent,
-                        shape: BoxShape.circle,
-                        boxShadow: [BoxShadow(color: AppColors.accent.withValues(alpha: 0.25), spreadRadius: 3)],
-                      ),
-                      child: const Icon(Icons.lock_outline, size: 20, color: AppColors.white),
-                    ),
+                  const Spacer(flex: 3),
+                  Container(
+                    width: 84,
+                    height: 84,
+                    decoration: BoxDecoration(color: t.surf2, shape: BoxShape.circle),
+                    child: Icon(Icons.lock_outline_rounded, size: 36, color: t.text),
                   ),
+                  const SizedBox(height: 24),
+                  Text('Dear Today,', style: Fonts.serif(38, t.text)),
+                  const SizedBox(height: 8),
+                  Text('Your days are locked.', style: Fonts.sans(15, t.muted)),
+                  if (error != null) ...[
+                    const SizedBox(height: 14),
+                    Text(error, textAlign: TextAlign.center, style: Fonts.sans(13, t.accent, weight: FontWeight.w600)),
+                  ],
+                  const Spacer(flex: 4),
+                  SizedBox(
+                    width: double.infinity,
+                    child: PrimaryButton(label: 'Unlock', icon: Icons.lock_open_rounded, onTap: AppLock.instance.unlock),
+                  ),
+                  const SizedBox(height: 24),
                 ],
               ),
-              const SizedBox(height: 24),
-              Text('Dear Today,', style: AppText.hand(40)),
-              const SizedBox(height: 8),
-              Text('Your letters are sealed.', style: AppText.body(15, color: AppColors.inkSoft)),
-              if (error != null) ...[
-                const SizedBox(height: 14),
-                Text(error, textAlign: TextAlign.center, style: AppText.body(13, color: AppColors.accent)),
-              ],
-              const Spacer(flex: 4),
-              // A neutral lock icon, since it may ask for a PIN, fingerprint or face.
-              ChunkyButton(label: 'Unlock', icon: Icons.lock_open_rounded, onTap: AppLock.instance.unlock),
-              const SizedBox(height: 24),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

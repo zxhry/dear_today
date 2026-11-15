@@ -4,8 +4,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../security/vault.dart';
 
-/// Keeps recently unlocked photos in memory so scrolling the album doesn't
-/// decrypt the same photo again and again. Nothing is written back to disk.
+/// Keeps recently unlocked photos in memory so scrolling doesn't decrypt
+/// the same photo again and again. Nothing is written back to disk.
 class PhotoCache {
   static final _cache = <String, Uint8List>{};
   static const _max = 40;
@@ -25,7 +25,7 @@ class PhotoCache {
 /// Shows an encrypted photo: unlocks it in memory, never as a plain file.
 class VaultImage extends StatefulWidget {
   final String path;
-  final Widget fallback; // shown if the photo can't be opened
+  final Widget fallback; // shown while loading, or if the photo can't be opened
   final int? decodeWidth; // smaller = less memory for tiny stamps
 
   const VaultImage({super.key, required this.path, required this.fallback, this.decodeWidth});
@@ -48,8 +48,7 @@ class _VaultImageState extends State<VaultImage> {
     return FutureBuilder<Uint8List>(
       future: _bytes,
       builder: (context, snap) {
-        if (snap.hasError) return widget.fallback;
-        if (!snap.hasData) return Container(color: const Color(0xFFEDE7DF));
+        if (!snap.hasData) return widget.fallback;
         return Image.memory(
           snap.data!,
           fit: BoxFit.cover,
