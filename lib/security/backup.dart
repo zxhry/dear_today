@@ -76,7 +76,7 @@ class Backup {
     //    600,000 rounds don't freeze the screen).
     final rng = Random.secure();
     final salt = List<int>.generate(16, (_) => rng.nextInt(256));
-    final key = await Isolate.run(() => _deriveKey(password, salt, rounds));
+    final key = await _deriveKeyInBackground(password, salt, rounds);
 
     // 3. Write the file one record at a time.
     final temp = await getTemporaryDirectory();
@@ -125,7 +125,7 @@ class Backup {
       final r = ByteData.sublistView(header, 4, 8).getUint32(0);
       if (r < 100000 || r > 10000000) throw BackupException('This backup file looks damaged.');
       final salt = header.sublist(8, 24);
-      final key = await Isolate.run(() => _deriveKey(password, salt, r));
+      final key = await _deriveKeyInBackground(password, salt, r);
 
       Future<Uint8List> next() async {
         final len = await raf.read(4);
@@ -197,6 +197,13 @@ class Backup {
   // ---- encryption ----
 
   static Uint8List _u32(int n) => (ByteData(4)..setUint32(0, n)).buffer.asUint8List();
+
+  /// Runs [_deriveKey] in a background isolate. Kept as its own function on
+  /// purpose: a closure passed to Isolate.run captures its surrounding scope,
+  /// and in restore() that scope holds an open file, which can't be sent to
+  /// another isolate. Here the closure can only see these three arguments.
+  static Future<List<int>> _deriveKeyInBackground(String password, List<int> salt, int r) =>
+      Isolate.run(() => _deriveKey(password, salt, r));
 
   static Future<List<int>> _deriveKey(String password, List<int> salt, int r) async {
     final kdf = Pbkdf2(macAlgorithm: Hmac.sha256(), iterations: r, bits: 256);
