@@ -7,6 +7,7 @@ import 'screens/home_shell.dart';
 import 'security/app_lock.dart';
 import 'security/vault.dart';
 import 'services/day_clock.dart';
+import 'services/legacy_cleanup.dart';
 import 'theme.dart';
 
 Future<void> main() async {
@@ -17,6 +18,7 @@ Future<void> main() async {
   await SettingsStore.instance.load();
   await Vault.instance.open(); // get the encryption key from the phone's Keystore
   await JournalStore.instance.load(); // read stamps, diary and vlog before showing them
+  LegacyCleanup.run(); // clears the old letters version's files (runs in the background)
   AppLock.instance.lockIfEnabled(); // start locked if app lock is on
   DayClock.instance.start(); // refresh "today" at midnight and on return
   runApp(const DearTodayApp());
