@@ -105,7 +105,7 @@ class _NoteBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.dt;
     // No title: the note's own words, as a short preview.
-    final preview = entry.text.trim().replaceAll(RegExp(r'\s*\n\s*'), ' ');
+    final preview = entry.displayText.replaceAll(RegExp(r'\s*\n\s*'), ' ');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

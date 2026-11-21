@@ -118,6 +118,10 @@ class DiaryEntry {
   /// The #tags written in the text, lower-case, without the #.
   List<String> get tags => tagsIn(text);
 
+  /// The text for reading: tags at the end of a line are left out (they
+  /// show as chips instead), and a tag inside a sentence loses its #.
+  String get displayText => withoutTags(text);
+
   /// The number of words written.
   int get words => text.trim().isEmpty ? 0 : text.trim().split(RegExp(r'\s+')).length;
 
@@ -141,6 +145,22 @@ class DiaryEntry {
         mood: j['mood'] as String? ?? '',
         prompt: j['prompt'] as String? ?? '',
       );
+}
+
+/// "Beli belah di Lotus #grocery" gives "Beli belah di Lotus", and
+/// "Lunch at #campus with Aina" gives "Lunch at campus with Aina".
+String withoutTags(String text) {
+  final tag = r'#[\p{L}\p{N}_]+';
+  final lines = <String>[];
+  for (final line in text.split('\n')) {
+    final cleaned = line
+        .replaceAll(RegExp('(\\s*$tag)+\\s*\$', unicode: true), '')
+        .replaceAllMapped(RegExp(tag, unicode: true), (m) => m.group(0)!.substring(1));
+    // Drop a line that only held tags, but keep blank lines you wrote.
+    if (cleaned.trim().isEmpty && line.trim().isNotEmpty) continue;
+    lines.add(cleaned);
+  }
+  return lines.join('\n').trim();
 }
 
 /// "#Campus walk #study" gives ['campus', 'study'].

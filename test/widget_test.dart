@@ -47,6 +47,13 @@ void main() {
     expect(VlogClip.fromJson(c.withReelIndex(null).toJson()).reelIndex, isNull);
   });
 
+  test('tags are left out of the text you read', () {
+    expect(withoutTags('Beli belah di Lotus #grocery'), 'Beli belah di Lotus');
+    expect(withoutTags('Lunch at #campus with Aina'), 'Lunch at campus with Aina');
+    expect(withoutTags('Rainy day\n\nStayed in.\n#home #rest'), 'Rainy day\n\nStayed in.');
+    expect(withoutTags('#study'), '');
+  });
+
   test('date helpers', () {
     final d = DateTime(2026, 11, 15, 18, 58);
     expect(shortDate(d), 'Sun, 15 Nov');

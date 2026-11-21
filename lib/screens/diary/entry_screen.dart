@@ -115,9 +115,9 @@ class _Reader extends StatelessWidget {
           Text(e.prompt, style: Fonts.serif(16, t.accent).copyWith(fontStyle: FontStyle.italic, height: 1.35)),
         ],
         const SizedBox(height: 10),
-        if (e.text.isNotEmpty)
+        if (e.displayText.isNotEmpty)
           SelectableText(
-            e.text,
+            e.displayText,
             style: Fonts.serif(17, t.text).copyWith(height: 1.6, letterSpacing: 0),
           )
         else
