@@ -3,6 +3,7 @@ import 'package:video_player/video_player.dart';
 
 import '../../data/journal_store.dart';
 import '../../models/models.dart';
+import '../../services/route_watch.dart';
 import '../../theme.dart';
 import '../../utils/dates.dart';
 import '../../widgets/ui.dart';
@@ -11,24 +12,67 @@ import '../../widgets/ui.dart';
 /// Tap the left or right side to move between clips, the middle to play
 /// or pause, and long-press to delete a clip.
 class ClipPlayer extends StatefulWidget {
-  final List<VlogClip> clips; // oldest first
-  const ClipPlayer({super.key, required this.clips});
+  final List<VlogClip> clips; // in the order they play
+  final ValueChanged<int>? onIndexChanged; // which clip is showing
+  final bool showDots; // the "Clip 2 of 5" line under the player
+  final String emptyText;
+  // Plays the whole day by itself, from the first clip, while this is true
+  // (the page is showing). It pauses when false or when another page opens on top.
+  final bool autoPlay;
+  const ClipPlayer({
+    super.key,
+    required this.clips,
+    this.autoPlay = false,
+    this.onIndexChanged,
+    this.showDots = true,
+    this.emptyText = 'No clips yet today.\nTap + to record a few seconds.',
+  });
 
   @override
   State<ClipPlayer> createState() => ClipPlayerState();
 }
 
-class ClipPlayerState extends State<ClipPlayer> {
-  late int _i = widget.clips.isEmpty ? 0 : widget.clips.length - 1; // start on the latest clip
+class ClipPlayerState extends State<ClipPlayer> with RouteAware {
+  // Autoplay starts from the first clip; otherwise show the latest one.
+  late int _i = widget.autoPlay || widget.clips.isEmpty ? 0 : widget.clips.length - 1;
   VideoPlayerController? _vc;
-  bool _playingAll = false;
+  late bool _playingAll = widget.autoPlay;
   bool _ended = false;
+  bool _covered = false; // another page is open on top
   int _token = 0; // ignores a slow load that's no longer wanted
+
+  bool get _mayAutoPlay => widget.autoPlay && !_covered;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    final i = _i;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onIndexChanged?.call(i);
+    });
+    _load(play: _mayAutoPlay);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null) routeWatch.subscribe(this, route);
+  }
+
+  @override
+  void didPushNext() {
+    _covered = true;
+    _vc?.pause();
+  }
+
+  @override
+  void didPopNext() {
+    _covered = false;
+    if (widget.autoPlay && !_ended) {
+      _playingAll = true;
+      _vc?.play();
+    }
   }
 
   @override
@@ -36,17 +80,33 @@ class ClipPlayerState extends State<ClipPlayer> {
     super.didUpdateWidget(oldWidget);
     final old = oldWidget;
     final ids = widget.clips.map((c) => c.id).join();
-    if (ids == old.clips.map((c) => c.id).join()) return;
+    if (ids == old.clips.map((c) => c.id).join()) {
+      // Same clips: just follow the page being shown or hidden.
+      if (widget.autoPlay != old.autoPlay) {
+        if (_mayAutoPlay) {
+          playAll();
+        } else {
+          _playingAll = false;
+          _vc?.pause();
+        }
+      }
+      return;
+    }
     // A clip was added (jump to it) or removed (stay close by).
     _i = widget.clips.length > old.clips.length
         ? widget.clips.length - 1
         : _i.clamp(0, widget.clips.isEmpty ? 0 : widget.clips.length - 1);
-    _playingAll = false;
-    _load();
+    _playingAll = _mayAutoPlay;
+    final i = _i;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onIndexChanged?.call(i);
+    });
+    _load(play: _mayAutoPlay);
   }
 
   @override
   void dispose() {
+    routeWatch.unsubscribe(this);
     _token++;
     _vc?.removeListener(_tick);
     _vc?.dispose();
@@ -73,7 +133,8 @@ class ClipPlayerState extends State<ClipPlayer> {
       }
       vc.addListener(_tick);
       setState(() => _vc = vc);
-      if (play) await vc.play();
+      // Don't start if the page was hidden or covered while this loaded.
+      if (play && !_covered && (widget.autoPlay || _playingAll)) await vc.play();
     } catch (e) {
       debugPrint('Clip: $e');
     }
@@ -97,8 +158,18 @@ class ClipPlayerState extends State<ClipPlayer> {
   void _go(int i, {bool play = false}) {
     if (i < 0 || i >= widget.clips.length) return;
     setState(() => _i = i);
+    widget.onIndexChanged?.call(i);
     _load(play: play);
   }
+
+  /// Shows clip [i] (from the strip under the player). While autoplaying,
+  /// it carries on through the rest of the day from there.
+  void go(int i) {
+    _playingAll = _mayAutoPlay;
+    _go(i, play: _mayAutoPlay);
+  }
+
+  int get index => _i;
 
   /// Plays every clip of the day, back to back.
   void playAll() {
@@ -156,7 +227,7 @@ class ClipPlayerState extends State<ClipPlayer> {
           alignment: Alignment.center,
           padding: const EdgeInsets.all(24),
           child: Text(
-            'No clips yet today.\nTap the camera button to record a few seconds.',
+            widget.emptyText,
             textAlign: TextAlign.center,
             style: Fonts.sans(14, t.muted, height: 1.45),
           ),
@@ -231,6 +302,31 @@ class ClipPlayerState extends State<ClipPlayer> {
                     ),
                   ],
                 ),
+                // One bar per clip, like stories: done, showing, still to come.
+                if (clips.length > 1 && clips.length <= 24)
+                  Positioned(
+                    left: 12,
+                    right: 64,
+                    top: 12,
+                    child: IgnorePointer(
+                      child: Row(
+                        children: [
+                          for (var k = 0; k < clips.length; k++) ...[
+                            if (k > 0) const SizedBox(width: 3),
+                            Expanded(
+                              child: Container(
+                                height: 3,
+                                decoration: BoxDecoration(
+                                  color: k <= _i ? Colors.white : Colors.white38,
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
                 // Delete this clip.
                 Positioned(
                   right: 8,
@@ -263,6 +359,7 @@ class ClipPlayerState extends State<ClipPlayer> {
             ),
           ),
         ),
+        if (widget.showDots) ...[
         const SizedBox(height: 12),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -283,6 +380,7 @@ class ClipPlayerState extends State<ClipPlayer> {
             Text('Clip ${_i + 1} of ${clips.length} · tap left or right', style: Fonts.mono(12, t.muted)),
           ],
         ),
+        ],
       ],
     );
   }

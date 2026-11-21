@@ -274,6 +274,8 @@ class JournalStore extends ChangeNotifier {
     required String text,
     List<String> keptPhotos = const [],
     List<String> newPhotos = const [],
+    String mood = '',
+    String prompt = '',
   }) async {
     final sealed = <String>[for (final p in newPhotos) await _sealFile(p, 'dtp')];
     final photos = [...keptPhotos, ...sealed];
@@ -282,14 +284,22 @@ class JournalStore extends ChangeNotifier {
       for (final old in editing.photos) {
         if (!keptPhotos.contains(old)) await deleteQuietly(old);
       }
-      entry = editing.copyWith(text: text.trim(), photos: photos);
+      entry = editing.copyWith(text: text.trim(), photos: photos, mood: mood, prompt: prompt);
       _entries.removeWhere((e) => e.id == editing.id);
     } else {
-      entry = DiaryEntry(id: _newId(), at: DateTime.now(), text: text.trim(), photos: photos);
+      entry = DiaryEntry(
+          id: _newId(), at: DateTime.now(), text: text.trim(), photos: photos, mood: mood, prompt: prompt);
     }
     _entries.add(entry);
     await _changed();
     return entry;
+  }
+
+  DiaryEntry? entryById(String id) {
+    for (final e in _entries) {
+      if (e.id == id) return e;
+    }
+    return null;
   }
 
   Future<void> deleteEntry(DiaryEntry entry) async {
@@ -303,6 +313,35 @@ class JournalStore extends ChangeNotifier {
   // ---------- vlog ----------
 
   List<VlogClip> clipsOn(DateTime day) => _clips.where((c) => sameDay(c.recordedAt, day)).toList();
+
+  /// A day's clips in the order its reel plays them: the order you set,
+  /// or the time they were recorded.
+  List<VlogClip> reelOn(DateTime day) {
+    final list = clipsOn(day);
+    if (list.every((c) => c.reelIndex == null)) return list;
+    list.sort((a, b) {
+      final ai = a.reelIndex ?? 1 << 20, bi = b.reelIndex ?? 1 << 20;
+      return ai != bi ? ai.compareTo(bi) : a.recordedAt.compareTo(b.recordedAt);
+    });
+    return list;
+  }
+
+  /// Saves a new order for a day's reel.
+  Future<void> reorderReel(List<VlogClip> ordered) async {
+    for (var k = 0; k < ordered.length; k++) {
+      final i = _clips.indexWhere((c) => c.id == ordered[k].id);
+      if (i >= 0) _clips[i] = _clips[i].withReelIndex(k);
+    }
+    await _changed();
+  }
+
+  /// Puts a day's reel back in the order the clips were recorded.
+  Future<void> resetReelOrder(DateTime day) async {
+    for (var i = 0; i < _clips.length; i++) {
+      if (sameDay(_clips[i].recordedAt, day)) _clips[i] = _clips[i].withReelIndex(null);
+    }
+    await _changed();
+  }
 
   /// Days that have clips, newest first.
   List<DateTime> get clipDays {
@@ -364,6 +403,67 @@ class JournalStore extends ChangeNotifier {
     } catch (e) {
       debugPrint('Could not clear playback copies: $e');
     }
+  }
+
+  // ---------- days ----------
+
+  /// Everything kept on one day, in the order it happened. Clips recorded
+  /// one after another (nothing else in between) are grouped together.
+  List<Moment> momentsOn(DateTime day) {
+    final all = <Moment>[
+      for (final e in _entries)
+        if (sameDay(e.at, day)) NoteMoment(e),
+      for (final s in _stamps)
+        if (sameDay(s.takenAt, day)) StampMoment(s),
+      for (final c in clipsOn(day)) ClipsMoment([c]),
+    ]..sort((a, b) => a.at.compareTo(b.at));
+    final out = <Moment>[];
+    for (final m in all) {
+      final last = out.isEmpty ? null : out.last;
+      if (m is ClipsMoment && last is ClipsMoment) {
+        out[out.length - 1] = ClipsMoment([...last.clips, ...m.clips]);
+      } else {
+        out.add(m);
+      }
+    }
+    return out;
+  }
+
+  /// How many things were kept on each day of a month (for the calendar).
+  Map<int, int> activityIn(DateTime month) {
+    final counts = <int, int>{};
+    void add(DateTime d) {
+      if (sameMonth(d, month)) counts[d.day] = (counts[d.day] ?? 0) + 1;
+    }
+
+    for (final e in _entries) {
+      add(e.at);
+    }
+    for (final s in _stamps) {
+      add(s.takenAt);
+    }
+    for (final c in _clips) {
+      add(c.recordedAt);
+    }
+    return counts;
+  }
+
+  /// Days in a row with something kept, up to today. Today still counts
+  /// as "in a row" before you've added anything to it.
+  int streak(DateTime today) {
+    final days = <DateTime>{
+      for (final e in _entries) dayOnly(e.at),
+      for (final s in _stamps) dayOnly(s.takenAt),
+      for (final c in _clips) dayOnly(c.recordedAt),
+    };
+    var d = dayOnly(today);
+    if (!days.contains(d)) d = DateTime(d.year, d.month, d.day - 1);
+    var n = 0;
+    while (days.contains(d)) {
+      n++;
+      d = DateTime(d.year, d.month, d.day - 1);
+    }
+    return n;
   }
 
   // ---------- storage ----------

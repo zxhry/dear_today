@@ -34,7 +34,8 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        // Makes a day's vlog: every clip in order, each with its time in the middle.
+        // Makes a day reel: every clip in order, each with its time in the middle
+        // (or none), wide or tall, with or without sound.
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "dear_today/video")
             .setMethodCallHandler { call, result ->
                 if (call.method != "exportDay") {
@@ -44,8 +45,10 @@ class MainActivity : FlutterFragmentActivity() {
                 val inputs = call.argument<List<String>>("inputs") ?: emptyList()
                 val times = call.argument<List<String>>("times") ?: emptyList()
                 val output = call.argument<String>("output") ?: ""
+                val portrait = call.argument<Boolean>("portrait") ?: false
+                val sound = call.argument<Boolean>("sound") ?: true
                 try {
-                    exportDay(inputs, times, output) { error ->
+                    exportDay(inputs, times, output, portrait, sound) { error ->
                         if (error == null) result.success(output) else result.error("export_failed", error, null)
                     }
                 } catch (e: Exception) {
@@ -68,16 +71,18 @@ class MainActivity : FlutterFragmentActivity() {
         }
     }
 
-    /** A see-through picture the size of the video with the time in the middle. */
-    private fun timeOverlay(time: String, width: Int, height: Int): Bitmap {
+    /** A see-through picture the size of the video with the time in the middle.
+     *  [band] is the height of the picture itself (less than [height] in a tall
+     *  reel, where the wide clip sits between black bars). */
+    private fun timeOverlay(time: String, width: Int, height: Int, band: Float): Bitmap {
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.WHITE
-            textSize = height / 22f
+            textSize = band / 15f // small and light, like the time in Threads-style vlogs
             textAlign = Paint.Align.CENTER
             typeface = Typeface.create("sans-serif", Typeface.NORMAL)
-            letterSpacing = 0.04f
-            setShadowLayer(height / 110f, 0f, 0f, Color.argb(140, 0, 0, 0))
+            letterSpacing = 0.05f
+            setShadowLayer(band / 90f, 0f, 0f, Color.argb(150, 0, 0, 0))
         }
         val y = height / 2f - (paint.ascent() + paint.descent()) / 2f
         Canvas(bitmap).drawText(time, width / 2f, y, paint)
@@ -85,21 +90,44 @@ class MainActivity : FlutterFragmentActivity() {
     }
 
     @OptIn(UnstableApi::class)
-    private fun exportDay(inputs: List<String>, times: List<String>, output: String, done: (String?) -> Unit) {
+    private fun exportDay(
+        inputs: List<String>,
+        times: List<String>,
+        output: String,
+        portrait: Boolean,
+        sound: Boolean,
+        done: (String?) -> Unit,
+    ) {
         require(inputs.isNotEmpty()) { "No clips" }
-        // One size for the whole vlog (16:9): 1080p if any clip is 1080p, else 720p.
+        // One size for the whole reel: 1080p if any clip is 1080p, else 720p.
+        // Wide reels fill 16:9; tall reels (9:16) keep each wide clip whole
+        // between black bars.
         val sharp = inputs.any { val (w, h) = shownSize(it); maxOf(w, h) >= 1900 }
-        val outW = if (sharp) 1920 else 1280
-        val outH = if (sharp) 1080 else 720
+        val longSide = if (sharp) 1920 else 1280
+        val shortSide = if (sharp) 1080 else 720
+        val outW = if (portrait) shortSide else longSide
+        val outH = if (portrait) longSide else shortSide
+        val band = if (portrait) outW * 9f / 16f else outH.toFloat()
+        val layout = if (portrait) Presentation.LAYOUT_SCALE_TO_FIT else Presentation.LAYOUT_SCALE_TO_FIT_WITH_CROP
 
         val items = inputs.mapIndexed { i, path ->
             val time = times.getOrElse(i) { "" }
-            val videoEffects = ImmutableList.of<Effect>(
-                Presentation.createForWidthAndHeight(outW, outH, Presentation.LAYOUT_SCALE_TO_FIT_WITH_CROP),
-                OverlayEffect(ImmutableList.of<TextureOverlay>(BitmapOverlay.createStaticBitmapOverlay(timeOverlay(time, outW, outH)))),
-            )
+            val size = Presentation.createForWidthAndHeight(outW, outH, layout)
+            val videoEffects = if (time.isEmpty()) {
+                ImmutableList.of<Effect>(size)
+            } else {
+                ImmutableList.of<Effect>(
+                    size,
+                    OverlayEffect(
+                        ImmutableList.of<TextureOverlay>(
+                            BitmapOverlay.createStaticBitmapOverlay(timeOverlay(time, outW, outH, band)),
+                        ),
+                    ),
+                )
+            }
             EditedMediaItem.Builder(MediaItem.fromUri(Uri.fromFile(File(path))))
                 .setEffects(Effects(ImmutableList.of(), videoEffects))
+                .setRemoveAudio(!sound)
                 .build()
         }
         val composition = Composition.Builder(ImmutableList.of(EditedMediaItemSequence.Builder(items).build())).build()

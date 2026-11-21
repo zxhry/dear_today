@@ -216,8 +216,8 @@ class _VlogCameraScreenState extends State<VlogCameraScreen> with WidgetsBinding
                 const SizedBox(height: 6),
                 Text(
                   _settings.vlogQuality == '720p'
-                      ? 'About 1.5 MB per 5s clip · recommended'
-                      : 'About 4 MB per 5s clip · sharper',
+                      ? 'About 1.2 MB per 4s clip · recommended'
+                      : 'About 3 MB per 4s clip · sharper',
                   style: Fonts.sans(13, t.muted),
                 ),
                 const SizedBox(height: 14),
@@ -361,7 +361,7 @@ class _VlogCameraScreenState extends State<VlogCameraScreen> with WidgetsBinding
                       ),
                     ),
                   ),
-                  // Clip length: 3s / 5s / 10s.
+                  // Clip length: 2s / 4s / 8s.
                   if (_review == null)
                   Positioned(
                     left: 0,
@@ -374,7 +374,7 @@ class _VlogCameraScreenState extends State<VlogCameraScreen> with WidgetsBinding
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            for (final s in const [3, 5, 10])
+                            for (final s in const [2, 4, 8])
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 3),
                                 child: Semantics(

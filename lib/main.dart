@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'data/journal_store.dart';
 import 'data/settings_store.dart';
@@ -8,10 +9,14 @@ import 'security/app_lock.dart';
 import 'security/vault.dart';
 import 'services/day_clock.dart';
 import 'services/legacy_cleanup.dart';
+import 'services/route_watch.dart';
 import 'theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Fonts come from assets/google_fonts, never from the internet (the app
+  // has no internet permission, so a download would fail anyway).
+  GoogleFonts.config.allowRuntimeFetching = false;
   // The app stays upright. The vlog camera still records sideways clips
   // when you turn the phone, because the camera follows the phone itself.
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
@@ -39,6 +44,7 @@ class DearTodayApp extends StatelessWidget {
         darkTheme: buildTheme(Brightness.dark),
         themeMode: SettingsStore.instance.themeMode,
         builder: (context, child) => AppLockGate(child: child!), // the lock sits on top of every screen
+        navigatorObservers: [routeWatch],
         home: const HomeShell(),
       ),
     );

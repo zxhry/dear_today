@@ -1,6 +1,6 @@
 # Dear Today 💌
 
-A small, private Android app for keeping your days: **stamps** for the nice places and moments, a **diary** timeline for everyday life, and a **daily vlog** of a few seconds at a time.
+A small, private Android app for keeping your days: **notes** for everyday life, **stamps** for the nice places and moments, and a **day reel** of a few seconds at a time, all on one timeline.
 
 I built this for myself and use it every day. It's shared here as a portfolio project.
 
@@ -11,10 +11,12 @@ I built this for myself and use it every day. It's shared here as a portfolio pr
 
 ## Features
 
+- **Today**: everything kept today (notes, clips and stamps) on one timeline, with a daily writing prompt, a streak, and counts of clips, stamps and words. One **+** button adds anything.
+- **Notes**: words and photos, a mood (Happy, Calm, Grateful…) and `#tags` written right in the text. Notes open in a reader; editing is one tap away. A note's photo can also be kept as a stamp.
+- **Journal**: a month calendar shaded by how much each day holds, that day's timeline, search across notes, tags, moods, places and sets, and filters for notes, photos, clips and stamps.
+- **Day reel**: record 2, 4 or 8 second landscape clips; the time is shown small in the middle. The day plays by itself in a 16:9 player, and you can save the reel to the gallery as one video, with or without the time, with or without sound.
 - **Stamps**: take a photo with the in-app camera and it becomes a perforated stamp (portrait, square or wide) with a postmark. Stamps are collected on monthly sheets and in your own sets.
-- **Diary**: a timeline of notes with photos, plus a Photos tab with a full-screen viewer. A note's photo can also be kept as a stamp.
-- **Vlog**: record 3, 5 or 10 second landscape clips; the time is shown in the middle. Watch the day's clips in a 16:9 player (tap left or right to move between them), and save the whole day to the gallery as one video with each clip's time drawn on it.
-- **Storage** page: how much space stamps, diary and vlog use, 720p / 1080p vlog quality, and freeing space by removing old clips.
+- **Storage** page: how much space stamps, notes and clips use, 720p / 1080p quality, and freeing space by removing old clips.
 - **Light, dark or system** theme (soft plum), and **app lock** with fingerprint / device credential.
 
 ## Privacy and security
@@ -23,7 +25,7 @@ Everything stays on the device. There are no accounts, no servers, and no analyt
 
 - **At rest:** stamps, notes, photos and clips are encrypted with AES-256-GCM. The key is randomly generated on first launch and kept in Android Keystore-backed secure storage (`flutter_secure_storage`). Every encryption uses a fresh random nonce. Large files are encrypted on a background isolate.
 - **Playback and sharing:** a clip is decrypted to the app's private cache only while it plays, and those copies are cleared on the next start. Shared or exported files are temporary copies that are deleted afterwards.
-- **Gallery:** nothing goes to the phone's gallery unless you ask (save a stamp or a day's vlog) or turn on *Also save to gallery*.
+- **Gallery:** nothing goes to the phone's gallery unless you ask (save a stamp or a day reel) or turn on *Also save to gallery*.
 - **Backups:** exported as a single file encrypted with a key derived from a password you choose (PBKDF2-HMAC-SHA256, 600,000 iterations, 16-byte random salt, then AES-256-GCM). The iteration count is stored in the file header so it can be raised later without breaking old backups.
 - **Android:** `allowBackup="false"`, so data isn't copied into Google's cloud backups.
 
@@ -42,18 +44,20 @@ first record = the list of stamps, sets, notes and clips (JSON); then one record
 ```
 lib/
 ├── data/       # journal store (stamps, sets, diary, clips) and settings
-├── models/     # Stamp, StampSet, DiaryEntry, VlogClip
+├── models/     # Stamp, StampSet, DiaryEntry, VlogClip, Moment
 ├── screens/
+│   ├── today/      # today's timeline, prompt and streak
+│   ├── journal/    # calendar, search, day timeline
+│   ├── diary/      # note reader, note editor, photo viewer
+│   ├── vlog/       # day reel, clip player, vlog camera
 │   ├── stamps/     # collections, collection, stamp detail, stamp camera
-│   ├── diary/      # timeline, note editor, photo viewer
-│   ├── vlog/       # today's clips, clip player, vlog camera
 │   └── settings/   # settings, storage, backup flows
 ├── security/   # vault (at-rest encryption), backup, app lock
-├── services/   # day rollover clock, gallery saving, day-vlog export
+├── services/   # day rollover clock, prompts, gallery saving, reel export
 ├── widgets/    # stamp frame, camera view, shared UI pieces
 ├── utils/      # date formatting
 └── theme.dart  # soft plum colours for light and dark
-android/…/MainActivity.kt   # makes the day's vlog with Media3 Transformer
+android/…/MainActivity.kt   # makes the day reel with Media3 Transformer
 ```
 
 ## Building

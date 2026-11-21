@@ -13,8 +13,15 @@ class SettingsStore extends ChangeNotifier {
   bool lockEnabled = false;
   String vlogQuality = '720p'; // '720p' (smaller) or '1080p' (sharper)
   bool saveToGallery = false; // also keep a plain copy in the phone's gallery
-  int clipSeconds = 5; // 3, 5 or 10
+  int clipSeconds = 4; // 2, 4 or 8
   DateTime? lastBackupAt;
+  // How a day reel is saved.
+  bool reelPortrait = false; // false 16:9, true 9:16 (for stories and Threads)
+  bool reelShowTime = true; // the time in the middle of each clip
+  bool reelSound = true; // keep the clips' own sound
+  // "Another prompt" moves to the next question for the rest of that day.
+  String promptDay = '';
+  int promptSkip = 0;
 
   File? _file;
   Future<File> _settingsFile() async =>
@@ -29,10 +36,15 @@ class SettingsStore extends ChangeNotifier {
       lockEnabled = j['lockEnabled'] as bool? ?? false; // kept from the letters version
       vlogQuality = j['vlogQuality'] == '1080p' ? '1080p' : '720p';
       saveToGallery = j['saveToGallery'] as bool? ?? false;
-      final secs = j['clipSeconds'] as int? ?? 5;
-      clipSeconds = const [3, 5, 10].contains(secs) ? secs : 5;
+      final secs = j['clipSeconds'] as int? ?? 4;
+      clipSeconds = const [2, 4, 8].contains(secs) ? secs : 4; // older 3/5/10 choices become 4
       final b = j['lastBackupAt'] as String?;
       lastBackupAt = b == null ? null : DateTime.tryParse(b);
+      reelPortrait = j['reelPortrait'] as bool? ?? false;
+      reelShowTime = j['reelShowTime'] as bool? ?? true;
+      reelSound = j['reelSound'] as bool? ?? true;
+      promptDay = j['promptDay'] as String? ?? '';
+      promptSkip = j['promptSkip'] as int? ?? 0;
     } catch (e) {
       debugPrint('settings.json could not be read: $e');
     }
@@ -44,6 +56,16 @@ class SettingsStore extends ChangeNotifier {
   Future<void> setSaveToGallery(bool v) => _update(() => saveToGallery = v);
   Future<void> setClipSeconds(int s) => _update(() => clipSeconds = s);
   Future<void> markBackedUp() => _update(() => lastBackupAt = DateTime.now());
+  Future<void> setReelPortrait(bool v) => _update(() => reelPortrait = v);
+  Future<void> setReelShowTime(bool v) => _update(() => reelShowTime = v);
+  Future<void> setReelSound(bool v) => _update(() => reelSound = v);
+
+  /// How many times "Another prompt" was tapped on [day] ("2026-11-21").
+  int promptSkipOn(String day) => promptDay == day ? promptSkip : 0;
+  Future<void> skipPrompt(String day) => _update(() {
+        promptSkip = promptSkipOn(day) + 1;
+        promptDay = day;
+      });
 
   Future<void> _update(void Function() change) async {
     change();
@@ -58,6 +80,11 @@ class SettingsStore extends ChangeNotifier {
         'saveToGallery': saveToGallery,
         'clipSeconds': clipSeconds,
         'lastBackupAt': lastBackupAt?.toIso8601String(),
+        'reelPortrait': reelPortrait,
+        'reelShowTime': reelShowTime,
+        'reelSound': reelSound,
+        'promptDay': promptDay,
+        'promptSkip': promptSkip,
       }),
       flush: true,
     );

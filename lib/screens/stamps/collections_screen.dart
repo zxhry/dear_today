@@ -53,25 +53,15 @@ class CollectionsScreen extends StatelessWidget {
           for (final s in store.sets) CollectionRef.set(s.id),
         ];
         return ListView(
-          padding: EdgeInsets.fromLTRB(20, MediaQuery.paddingOf(context).top + 14, 20, 150),
+          padding: EdgeInsets.fromLTRB(20, pageTop(context), 20, 150),
           children: [
-            const SectionLabel('Dear Today'),
-            const SizedBox(height: 14),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: PageTitle(
-                    'Collections',
-                    subtitle: '${stampCount(store.stamps.length)} across ${refs.length} '
-                        '${refs.length == 1 ? 'collection' : 'collections'}',
-                  ),
-                ),
-                const SizedBox(width: 12),
-                PrimaryButton(label: 'New set', icon: Icons.add_rounded, height: 44, onTap: () => _newSet(context)),
-              ],
+            PageHeader(
+              label: '${stampCount(store.stamps.length)} · ${refs.length} '
+                  '${refs.length == 1 ? 'collection' : 'collections'}',
+              title: 'Stamps',
+              actions: [HeaderChip(icon: Icons.add_rounded, label: 'New set', onTap: () => _newSet(context))],
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: headerGap),
             for (final ref in refs) ...[
               _CollectionCard(ref: ref),
               const SizedBox(height: 10),

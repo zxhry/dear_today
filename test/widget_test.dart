@@ -27,6 +27,26 @@ void main() {
     expect(VlogClip.fromJson(c.toJson()).duration, const Duration(seconds: 5));
   });
 
+  test('mood, prompt, tags and reel order survive a round trip', () {
+    final e = DiaryEntry(
+      id: '4',
+      at: DateTime(2026, 11, 21, 21, 5),
+      text: 'Small wins #Campus walk #study #campus',
+      photos: const [],
+      mood: 'Calm',
+      prompt: 'What made today feel different?',
+    );
+    final copy = DiaryEntry.fromJson(e.toJson());
+    expect(copy.mood, 'Calm');
+    expect(copy.prompt, e.prompt);
+    expect(copy.tags, ['campus', 'study']);
+    expect(copy.words, 6);
+    final c = VlogClip(
+        id: '5', recordedAt: DateTime(2026, 11, 21, 8, 42), durationMs: 4000, path: 'd.dtv', quality: '720p', reelIndex: 2);
+    expect(VlogClip.fromJson(c.toJson()).reelIndex, 2);
+    expect(VlogClip.fromJson(c.withReelIndex(null).toJson()).reelIndex, isNull);
+  });
+
   test('date helpers', () {
     final d = DateTime(2026, 11, 15, 18, 58);
     expect(shortDate(d), 'Sun, 15 Nov');

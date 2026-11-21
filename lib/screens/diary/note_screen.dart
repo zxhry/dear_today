@@ -14,7 +14,8 @@ import '../../widgets/vault_image.dart';
 /// Write a new diary note, or change one you wrote earlier.
 class NoteScreen extends StatefulWidget {
   final DiaryEntry? editing;
-  const NoteScreen({super.key, this.editing});
+  final String prompt; // today's question, when writing from the prompt card
+  const NoteScreen({super.key, this.editing, this.prompt = ''});
 
   @override
   State<NoteScreen> createState() => _NoteScreenState();
@@ -25,6 +26,8 @@ class _NoteScreenState extends State<NoteScreen> {
   late final List<String> _kept = [...?widget.editing?.photos]; // encrypted photos already saved
   final List<String> _picked = []; // new photos, not saved yet
   late final DateTime _at = widget.editing?.at ?? DateTime.now();
+  late String _mood = widget.editing?.mood ?? '';
+  late final String _prompt = widget.editing?.prompt ?? widget.prompt;
   bool _alsoStamp = false;
   bool _busy = false;
 
@@ -32,6 +35,7 @@ class _NoteScreenState extends State<NoteScreen> {
   bool get _changed =>
       _text.text.trim() != (widget.editing?.text ?? '') ||
       _picked.isNotEmpty ||
+      _mood != (widget.editing?.mood ?? '') ||
       _kept.length != (widget.editing?.photos.length ?? 0);
 
   @override
@@ -72,7 +76,14 @@ class _NoteScreenState extends State<NoteScreen> {
           deleteSource: false, // the note below still needs this photo
         );
       }
-      await store.saveEntry(editing: widget.editing, text: text, keptPhotos: _kept, newPhotos: _picked);
+      await store.saveEntry(
+        editing: widget.editing,
+        text: text,
+        keptPhotos: _kept,
+        newPhotos: _picked,
+        mood: _mood,
+        prompt: _prompt,
+      );
       if (mounted) Navigator.pop(context);
     } catch (e) {
       debugPrint('Save note: $e');
@@ -174,21 +185,46 @@ class _NoteScreenState extends State<NoteScreen> {
                         ),
                         const SizedBox(height: 10),
                       ],
+                      if (_prompt.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(_prompt, style: Fonts.serif(18, t.accent).copyWith(height: 1.3)),
+                      ],
                       TextField(
                         controller: _text,
                         autofocus: !_editing,
                         minLines: 3,
                         maxLines: null,
                         textCapitalization: TextCapitalization.sentences,
-                        style: Fonts.mono(17, t.text, height: 1.6),
+                        style: Fonts.sans(15.5, t.text, height: 1.6),
                         decoration: InputDecoration(
-                          hintText: 'what happened just now?',
-                          hintStyle: Fonts.mono(17, t.muted.withValues(alpha: 0.7)),
+                          hintText: _prompt.isEmpty ? 'what happened just now? add #tags if you like' : 'write your answer…',
+                          hintStyle: Fonts.sans(15.5, t.muted.withValues(alpha: 0.7), height: 1.6),
                           border: InputBorder.none,
                         ),
                         onChanged: (_) => setState(() {}),
                       ),
                       const SizedBox(height: 10),
+                      Text('HOW DID IT FEEL?', style: Fonts.label(t.muted)),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final m in moods)
+                            ChoiceChip(
+                              label: Text(m),
+                              selected: _mood == m,
+                              showCheckmark: false,
+                              labelStyle: Fonts.sans(13, _mood == m ? t.fabFg : t.text, weight: FontWeight.w500),
+                              selectedColor: t.fabBg,
+                              backgroundColor: t.surf,
+                              side: BorderSide(color: _mood == m ? t.fabBg : t.border),
+                              shape: const StadiumBorder(),
+                              onSelected: (on) => setState(() => _mood = on ? m : ''),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
                       if (_picked.isNotEmpty)
                         CardGroup(
                           children: [

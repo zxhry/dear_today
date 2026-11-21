@@ -9,9 +9,10 @@ import '../../widgets/ui.dart';
 import 'backup_flows.dart';
 import 'storage_screen.dart';
 
-/// The Settings tab.
+/// Settings, opened from the gear on the Today page.
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  final bool asPage; // with a back button (it's no longer a tab)
+  const SettingsScreen({super.key, this.asPage = true});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -52,12 +53,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       listenable: _settings,
       builder: (context, _) {
         final last = _settings.lastBackupAt;
-        return ListView(
-          // Starts lower than the other tabs, so its title lines up with theirs.
-          padding: EdgeInsets.fromLTRB(20, MediaQuery.paddingOf(context).top + 43, 20, 150),
+        final pad = MediaQuery.paddingOf(context);
+        final list = ListView(
+          padding: EdgeInsets.fromLTRB(
+              20, pageTop(context, pushed: widget.asPage), 20, widget.asPage ? pad.bottom + 32 : 150),
           children: [
-            const PageTitle('Settings'),
-            const SizedBox(height: 18),
+            if (widget.asPage) const TopBar(),
+            const PageHeader(label: 'Dear Today', title: 'Settings'),
+            const SizedBox(height: headerGap),
             const SectionLabel('Appearance'),
             const SizedBox(height: 8),
             CardGroup(children: [
@@ -130,6 +133,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Center(child: Text('Dear Today · v2', style: Fonts.mono(11, t.muted))),
           ],
         );
+        return widget.asPage ? Scaffold(body: list) : list;
       },
     );
   }

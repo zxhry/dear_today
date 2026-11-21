@@ -76,14 +76,11 @@ class _StorageScreenState extends State<StorageScreen> {
         listenable: _settings,
         builder: (context, _) => ListView(
           padding: EdgeInsets.fromLTRB(
-              20, MediaQuery.paddingOf(context).top + 10, 20, MediaQuery.paddingOf(context).bottom + 40),
+              20, pageTop(context, pushed: true), 20, MediaQuery.paddingOf(context).bottom + 40),
           children: [
-            Row(children: [
-              CircleIconButton(icon: Icons.arrow_back_rounded, tooltip: 'Back', onTap: () => Navigator.pop(context)),
-            ]),
-            const SizedBox(height: 14),
-            PageTitle('Storage', size: 34, subtitle: u == null ? 'Counting…' : '${fileSize(u.total)} used on this phone'),
-            const SizedBox(height: 16),
+            const TopBar(),
+            PageHeader(label: u == null ? 'Counting…' : '${fileSize(u.total)} used on this phone', title: 'Storage'),
+            const SizedBox(height: headerGap),
             if (u != null) ...[
               // One bar, split into vlog, diary and stamps.
               Semantics(
@@ -129,8 +126,8 @@ class _StorageScreenState extends State<StorageScreen> {
                 SettingsRow(
                   title: 'Vlog quality',
                   subtitle: _settings.vlogQuality == '720p'
-                      ? 'About 1.5 MB per 5s clip · recommended'
-                      : 'About 4 MB per 5s clip · sharper',
+                      ? 'About 1.2 MB per 4s clip · recommended'
+                      : 'About 3 MB per 4s clip · sharper',
                   trailing: Segmented<String>(
                     mono: true,
                     options: const [('720p', '720p'), ('1080p', '1080p')],

@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
 
 import '../theme.dart';
-import 'diary/diary_screen.dart';
 import 'diary/note_screen.dart';
-import 'settings/settings_screen.dart';
+import 'journal/journal_screen.dart';
 import 'stamps/collect_screen.dart';
 import 'stamps/collections_screen.dart';
+import 'today/today_screen.dart';
 import 'vlog/vlog_camera_screen.dart';
 import 'vlog/vlog_screen.dart';
 
-/// Holds the four tabs, the floating bar that switches between them, and
-/// the round button beside it. The round button follows the tab: a new
-/// note on Diary, the vlog camera on Vlog, the stamp camera everywhere else.
+/// Holds the four tabs (Today, Journal, Reel, Stamps), the floating bar that
+/// switches between them, and the round + button that adds anything.
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
 
@@ -23,28 +22,66 @@ class _HomeShellState extends State<HomeShell> {
   int _tab = 0;
 
   static const _tabs = [
-    (Icons.folder_outlined, Icons.folder_rounded, 'Stamps'),
-    (Icons.menu_book_outlined, Icons.menu_book_rounded, 'Diary'),
-    (Icons.videocam_outlined, Icons.videocam_rounded, 'Vlog'),
-    (Icons.settings_outlined, Icons.settings_rounded, 'Settings'),
+    (Icons.wb_sunny_outlined, Icons.wb_sunny_rounded, 'Today'),
+    (Icons.calendar_month_outlined, Icons.calendar_month_rounded, 'Journal'),
+    (Icons.videocam_outlined, Icons.videocam_rounded, 'Day reel'),
+    (Icons.local_post_office_outlined, Icons.local_post_office_rounded, 'Stamps'),
   ];
 
-  void _action() {
-    final Widget page = switch (_tab) {
-      1 => const NoteScreen(),
+  /// The + button: on Reel it opens the camera straight away, on Stamps
+  /// the stamp camera; elsewhere it asks what to add.
+  Future<void> _add() async {
+    Widget? page = switch (_tab) {
       2 => const VlogCameraScreen(),
-      _ => const CollectScreen(),
+      3 => const CollectScreen(),
+      _ => null,
     };
-    Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+    page ??= await showModalBottomSheet<Widget>(
+      context: context,
+      builder: (context) {
+        final t = context.dt;
+        Widget row(IconData icon, String title, String sub, Widget to) => ListTile(
+              leading: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(color: t.surf2, borderRadius: BorderRadius.circular(12)),
+                child: Icon(icon, size: 20, color: t.text),
+              ),
+              title: Text(title, style: Fonts.sans(15, t.text, weight: FontWeight.w600)),
+              subtitle: Text(sub, style: Fonts.sans(12, t.muted)),
+              onTap: () => Navigator.pop(context, to),
+            );
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                child: Text('Add to today', style: Fonts.serif(24, t.text)),
+              ),
+              row(Icons.edit_outlined, 'Write a note', 'Words, photos, a mood, #tags', const NoteScreen()),
+              row(Icons.videocam_outlined, 'Record a clip', 'A few seconds for your day reel', const VlogCameraScreen()),
+              row(Icons.local_post_office_outlined, 'Collect a stamp', 'A place or moment worth keeping',
+                  const CollectScreen()),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+    if (page == null || !mounted) return;
+    final to = page;
+    Navigator.push(context, MaterialPageRoute(builder: (_) => to));
   }
 
   @override
   Widget build(BuildContext context) {
     final t = context.dt;
-    final (actionIcon, actionLabel) = switch (_tab) {
-      1 => (Icons.edit_outlined, 'New note'),
-      2 => (Icons.videocam_outlined, 'Record a clip'),
-      _ => (Icons.add_rounded, 'Collect a stamp'),
+    final actionLabel = switch (_tab) {
+      2 => 'Record a clip',
+      3 => 'Collect a stamp',
+      _ => 'Add to today',
     };
     return Scaffold(
       body: Stack(
@@ -52,7 +89,7 @@ class _HomeShellState extends State<HomeShell> {
           // IndexedStack keeps each tab alive, so switching back doesn't reset it.
           IndexedStack(
             index: _tab,
-            children: const [CollectionsScreen(), DiaryScreen(), VlogScreen(), SettingsScreen()],
+            children: [const TodayScreen(), const JournalScreen(), VlogScreen(active: _tab == 2), const CollectionsScreen()],
           ),
           // A soft fade so content slides under the bar.
           Positioned(
@@ -81,11 +118,11 @@ class _HomeShellState extends State<HomeShell> {
               children: [
                 Expanded(
                   child: Container(
-                    height: 64,
+                    height: 60,
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
                       color: t.surf,
-                      borderRadius: BorderRadius.circular(32),
+                      borderRadius: BorderRadius.circular(30),
                       border: Border.all(color: t.border),
                       boxShadow: [BoxShadow(color: t.shadow, blurRadius: 16, offset: const Offset(0, 4))],
                     ),
@@ -101,16 +138,17 @@ class _HomeShellState extends State<HomeShell> {
                                 behavior: HitTestBehavior.opaque,
                                 onTap: () => setState(() => _tab = i),
                                 child: Center(
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 180),
-                                    width: 48,
-                                    height: 48,
-                                    decoration: BoxDecoration(
-                                      color: i == _tab ? t.surf2 : Colors.transparent,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(i == _tab ? _tabs[i].$2 : _tabs[i].$1,
-                                        size: 22, color: i == _tab ? t.text : t.muted),
+                                  // The open tab is simply darker, with no shape behind it.
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(i == _tab ? _tabs[i].$2 : _tabs[i].$1,
+                                          size: 20, color: i == _tab ? t.text : t.muted),
+                                      const SizedBox(height: 3),
+                                      Text(_tabs[i].$3,
+                                          style: Fonts.sans(10, i == _tab ? t.text : t.muted,
+                                              weight: i == _tab ? FontWeight.w700 : FontWeight.w500)),
+                                    ],
                                   ),
                                 ),
                               ),
@@ -129,8 +167,8 @@ class _HomeShellState extends State<HomeShell> {
                     elevation: 0,
                     child: InkWell(
                       customBorder: const CircleBorder(),
-                      onTap: _action,
-                      child: SizedBox(width: 64, height: 64, child: Icon(actionIcon, size: 26, color: t.fabFg)),
+                      onTap: _add,
+                      child: SizedBox(width: 60, height: 60, child: Icon(Icons.add_rounded, size: 26, color: t.fabFg)),
                     ),
                   ),
                 ),

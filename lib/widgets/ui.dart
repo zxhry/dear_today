@@ -121,12 +121,110 @@ class SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) => Text(text.toUpperCase(), style: Fonts.label(context.dt.muted));
 }
 
+/// Space above every page's first line, so headers sit at the same height
+/// on every page. Tabs start a little lower; pages with a back button use
+/// that row instead.
+double pageTop(BuildContext context, {bool pushed = false}) =>
+    MediaQuery.paddingOf(context).top + (pushed ? 10 : 18);
+
+/// The gap between a header and the page below it.
+const double headerGap = 18;
+
+/// The row at the top of a page you opened: back on the left, actions right.
+class TopBar extends StatelessWidget {
+  final List<Widget> actions;
+  const TopBar({super.key, this.actions = const []});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: Row(
+          children: [
+            CircleIconButton(icon: Icons.arrow_back_rounded, tooltip: 'Back', onTap: () => Navigator.pop(context)),
+            const Spacer(),
+            for (var i = 0; i < actions.length; i++) ...[
+              if (i > 0) const SizedBox(width: 8),
+              actions[i],
+            ],
+          ],
+        ),
+      );
+}
+
+/// The header every page uses: a small capitals line, the serif title, and
+/// anything that belongs to the page on the right (chips, a settings button).
+class PageHeader extends StatelessWidget {
+  final String label;
+  final String title;
+  final List<Widget> actions;
+  const PageHeader({super.key, required this.label, required this.title, this.actions = const []});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.dt;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label.toUpperCase(), maxLines: 1, overflow: TextOverflow.ellipsis, style: Fonts.label(t.muted)),
+              const SizedBox(height: 6),
+              Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Fonts.serif(32, t.text)),
+            ],
+          ),
+        ),
+        for (final a in actions) ...[
+          const SizedBox(width: 8),
+          Padding(padding: const EdgeInsets.only(bottom: 2), child: a),
+        ],
+      ],
+    );
+  }
+}
+
+/// A small rounded chip for page headers ("18 days", "0:24", "+ New set").
+class HeaderChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+  final String? tooltip;
+  const HeaderChip({super.key, required this.icon, required this.label, this.onTap, this.tooltip});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.dt;
+    final chip = Material(
+      color: t.surf2,
+      shape: const StadiumBorder(),
+      child: InkWell(
+        customBorder: const StadiumBorder(),
+        onTap: onTap,
+        child: Container(
+          height: 36,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 15, color: t.text),
+              const SizedBox(width: 6),
+              Text(label, style: Fonts.mono(12, t.text)),
+            ],
+          ),
+        ),
+      ),
+    );
+    return tooltip == null ? chip : Tooltip(message: tooltip!, child: chip);
+  }
+}
+
 /// A big serif page title with a small line under it.
 class PageTitle extends StatelessWidget {
   final String title;
   final String? subtitle;
   final double size;
-  const PageTitle(this.title, {super.key, this.subtitle, this.size = 36});
+  const PageTitle(this.title, {super.key, this.subtitle, this.size = 32});
 
   @override
   Widget build(BuildContext context) {

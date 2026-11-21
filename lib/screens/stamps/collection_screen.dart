@@ -35,50 +35,34 @@ class _CollectionScreenState extends State<CollectionScreen> {
           return CustomScrollView(
             slivers: [
               SliverPadding(
-                padding: EdgeInsets.fromLTRB(20, MediaQuery.paddingOf(context).top + 10, 20, 0),
+                padding: EdgeInsets.fromLTRB(20, pageTop(context, pushed: true), 20, 0),
                 sliver: SliverList.list(
                   children: [
-                    Row(
-                      children: [
+                    TopBar(actions: [
+                      if (set != null)
                         CircleIconButton(
-                            icon: Icons.arrow_back_rounded, tooltip: 'Back', onTap: () => Navigator.pop(context)),
-                        const Spacer(),
-                        if (set != null)
-                          CircleIconButton(
-                            icon: Icons.more_horiz_rounded,
-                            tooltip: 'Set options',
-                            onTap: () async {
-                              await showSetOptions(context, set);
-                              if (context.mounted && store.setById(set.id) == null) Navigator.pop(context);
-                            },
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Expanded(
-                          child: PageTitle(
-                            widget.ref.title(store),
-                            size: 32,
-                            subtitle: '${widget.ref.kind} · ${stampCount(stamps.length)}',
-                          ),
+                          icon: Icons.more_horiz_rounded,
+                          tooltip: 'Set options',
+                          onTap: () async {
+                            await showSetOptions(context, set);
+                            if (context.mounted && store.setById(set.id) == null) Navigator.pop(context);
+                          },
                         ),
+                    ]),
+                    PageHeader(
+                      label: '${widget.ref.kind} · ${stampCount(stamps.length)}',
+                      title: widget.ref.title(store),
+                      actions: [
                         if (stamps.length > 1)
-                          TextButton(
-                            onPressed: () => setState(() => _newestFirst = !_newestFirst),
-                            style: TextButton.styleFrom(
-                              shape: StadiumBorder(side: BorderSide(color: t.border)),
-                              backgroundColor: t.surf,
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
-                            ),
-                            child: Text(_newestFirst ? 'Newest first' : 'Oldest first',
-                                style: Fonts.sans(12, t.text, weight: FontWeight.w600)),
+                          HeaderChip(
+                            icon: Icons.swap_vert_rounded,
+                            label: _newestFirst ? 'Newest' : 'Oldest',
+                            tooltip: _newestFirst ? 'Newest first' : 'Oldest first',
+                            onTap: () => setState(() => _newestFirst = !_newestFirst),
                           ),
                       ],
                     ),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: headerGap),
                     if (stamps.isEmpty)
                       EmptyNote(
                         icon: Icons.local_post_office_outlined,
